@@ -69,6 +69,9 @@ def get_benchmark_by_name(model_name,
                           hidden_size=None):
     """Get dataset, model and loss function"""
     from src.maml.model import ModelConvOmniglot, ModelConvMiniImagenet, ModelMLPSinusoid
+    from src.protonet.model import Protonet_Omniglot, Protonet_MiniImagenet
+    from src.protonet.metalearners.loss import prototypical_loss
+
     dataset_transform = ClassSplitter(shuffle=True,
                                       num_train_per_class=num_shots,
                                       num_test_per_class=num_shots_test)
@@ -94,6 +97,8 @@ def get_benchmark_by_name(model_name,
         if model_name == 'maml':
             model = ModelMLPSinusoid(hidden_sizes=[40, 40])
             loss_function = F.mse_loss
+        if model_name == 'protonet':
+            raise NotImplementedError("Not implemented for protonet on sinusoid dataset")
 
     elif name == 'omniglot':
         class_augmentations = [Rotation([90, 180, 270])]
@@ -133,6 +138,9 @@ def get_benchmark_by_name(model_name,
         if model_name == 'maml':
             model = ModelConvOmniglot(num_ways, hidden_size=hidden_size)
             loss_function = F.cross_entropy
+        if model_name == 'protonet':
+            model = Protonet_Omniglot()
+            loss_function = prototypical_loss
 
     elif name == 'miniimagenet':
         transform = Compose([Resize(84), ToTensor()])
@@ -168,6 +176,9 @@ def get_benchmark_by_name(model_name,
         if model_name == 'maml':
             model = ModelConvMiniImagenet(num_ways, hidden_size=hidden_size)
             loss_function = F.cross_entropy
+        if model_name == 'protonet':
+            model = Protonet_MiniImagenet()
+            loss_function = prototypical_loss
 
     else:
         raise NotImplementedError('Unknown dataset `{0}`.'.format(name))

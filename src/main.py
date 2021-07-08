@@ -5,6 +5,7 @@ import json
 from glob import glob
 from src.utils import seed_everything
 from src.maml import MAMLTrainer, MAMLTester
+from src.protonet import ProtonetTrainer, ProtonetTester
 
 
 def parse_args():
@@ -41,7 +42,7 @@ def parse_args():
     parser.add_argument('--num-shots-test', type=int, default=15,
                         help='Number of test example per class.'
                         ' If negative, same as the number '
-                        'of training examples `--num-shots` (default: 15).')
+                        'of training examples `--num-shots-test` (default: 15).')
 
     # Model
     parser.add_argument('--hidden-size', type=int, default=64,
@@ -103,6 +104,15 @@ if __name__ == '__main__':
                 seed_everything(run)
                 maml_trainer = MAMLTrainer(args)
                 log.add_result(run, maml_trainer.get_result())
+        elif args.model == 'protonet':
+            """
+            Protonet Trainer
+            """
+            for run in range(args.runs):
+                gc.collect()
+                seed_everything(run)
+                protonet_trainer = ProtonetTrainer(args)
+                log.add_result(run, protonet_trainer.get_result())
         print(f"Average Performance of {args.model} on {args.dataset}:")
         log.print_statistics()
     else:
@@ -123,6 +133,12 @@ if __name__ == '__main__':
                 """
                 maml_tester = MAMLTester(config)
                 log.add_result(run, maml_tester.get_result())
+            elif args.model == 'protonet':
+                """
+                Protonet Test
+                """
+                protonet_tester = ProtonetTester(config)
+                log.add_result(run, protonet_tester.get_result())
         print(f"Average Performance of {args.model} on {args.dataset}:")
         log.print_statistics()
         pass

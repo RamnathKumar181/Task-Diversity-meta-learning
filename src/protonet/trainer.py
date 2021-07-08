@@ -3,12 +3,12 @@ import time
 import os
 import logging
 import torch
-from src.maml.metalearners import ModelAgnosticMetaLearning as MAML
+from src.protonet.metalearners import PrototypicalNetwork as proto_net
 
 from src.utils import get_benchmark_by_name
 
 
-class MAMLTrainer():
+class ProtonetTrainer():
     def __init__(self, args):
         self.args = args
         self.highest_val = 0
@@ -67,14 +67,15 @@ class MAMLTrainer():
                                                lr=self.args.meta_lr)
 
     def _build_metalearner(self):
-
-        self.metalearner = MAML(self.benchmark.model,
-                                self.meta_optimizer,
-                                first_order=self.args.first_order,
-                                num_adaptation_steps=self.args.num_steps,
-                                step_size=self.args.step_size,
-                                loss_function=self.benchmark.loss_function,
-                                device=self.device)
+        self.metalearner = proto_net(self.benchmark.model,
+                                     self.meta_optimizer,
+                                     num_adaptation_steps=self.args.num_steps,
+                                     step_size=self.args.step_size,
+                                     loss_function=self.benchmark.loss_function,
+                                     device=self.device,
+                                     num_ways=self.args.num_ways,
+                                     num_shots=self.args.num_shots,
+                                     num_shots_test=self.args.num_shots_test)
 
     def _train(self):
         best_value = None
@@ -88,11 +89,10 @@ class MAMLTrainer():
                                                 max_batches=self.args.num_batches,
                                                 verbose=self.args.verbose,
                                                 desc='Validation')
-            logging.info(f"Epoch {epoch}: {results['accuracies_after']}")
             # Save best model
             if ((best_value is None)
-                    or (best_value < results['accuracies_after'])):
-                best_value = results['accuracies_after']
+                    or (best_value < results['accuracies'])):
+                best_value = results['accuracies']
                 save_model = True
             else:
                 save_model = False
@@ -100,7 +100,7 @@ class MAMLTrainer():
             if save_model and (self.args.output_folder is not None):
                 with open(self.args.model_path, 'wb') as f:
                     torch.save(self.benchmark.model.state_dict(), f)
-        self.highest_val = results['accuracies_after']
+        self.highest_val = results['accuracies']
 
         if hasattr(self.benchmark.meta_train_dataset, 'close'):
             self.benchmark.meta_train_dataset.close()
@@ -114,7 +114,7 @@ class MAMLTrainer():
                             and torch.cuda.is_available() else 'cpu')
 
 
-class MAMLTester():
+class ProtonetTester():
     def __init__(self, config):
         self.config = config
         self.highest_test = 0
@@ -144,13 +144,14 @@ class MAMLTester():
 
     def _build_metalearner(self):
 
-        self.metalearner = MAML(self.benchmark.model,
-                                self.meta_optimizer,
-                                first_order=self.config['first_order'],
-                                num_adaptation_steps=self.config['num_steps'],
-                                step_size=self.config['step_size'],
-                                loss_function=self.benchmark.loss_function,
-                                device=self.device)
+        self.metalearner = proto_net(self.benchmark.model,
+                                     self.meta_optimizer,
+                                     first_order=self.config['first_order'],
+                                     num_adaptation_steps=self.config['num_steps'],
+                                     step_size=self.config['step_size'],
+                                     loss_function=self.benchmark.loss_function,
+                                     device=self.device,
+                                     num_ways=self.config['num_ways'])
 
     def _test(self):
         results = self.metalearner.evaluate(self.meta_test_dataloader,
