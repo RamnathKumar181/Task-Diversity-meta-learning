@@ -6,6 +6,7 @@ from glob import glob
 from src.utils import seed_everything
 from src.maml import MAMLTrainer, MAMLTester
 from src.protonet import ProtonetTrainer, ProtonetTester
+from src.reptile import ReptileTrainer, ReptileTester
 
 
 def parse_args():
@@ -17,7 +18,7 @@ def parse_args():
     parser.add_argument('--runs', type=int, default=5,
                         help='Number of experimental runs (default: 5).')
     parser.add_argument('--model', type=str,
-                        choices=['maml', 'protonet'],
+                        choices=['maml', 'protonet', 'reptile'],
                         default='maml',
                         help='Name of the model to be used (default: MAML).')
     parser.add_argument('--task_sampler', type=str,
@@ -113,6 +114,15 @@ if __name__ == '__main__':
                 seed_everything(run)
                 protonet_trainer = ProtonetTrainer(args)
                 log.add_result(run, protonet_trainer.get_result())
+        elif args.model == 'reptile':
+            """
+            Reptile Trainer
+            """
+            for run in range(args.runs):
+                gc.collect()
+                seed_everything(run)
+                reptile_trainer = ReptileTrainer(args)
+                log.add_result(run, reptile_trainer.get_result())
         print(f"Average Performance of {args.model} on {args.dataset}:")
         log.print_statistics()
     else:
@@ -139,6 +149,12 @@ if __name__ == '__main__':
                 """
                 protonet_tester = ProtonetTester(config)
                 log.add_result(run, protonet_tester.get_result())
+            elif args.model == 'reptile':
+                """
+                Reptile Test
+                """
+                reptile_tester = ReptileTester(config)
+                log.add_result(run, reptile_tester.get_result())
         print(f"Average Performance of {args.model} on {args.dataset}:")
         log.print_statistics()
         pass

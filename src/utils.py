@@ -94,7 +94,7 @@ def get_benchmark_by_name(model_name,
                                      target_transform=transform,
                                      dataset_transform=dataset_transform)
 
-        if model_name == 'maml':
+        if model_name in ['maml', 'reptile']:
             model = ModelMLPSinusoid(hidden_sizes=[40, 40])
             loss_function = F.mse_loss
         if model_name == 'protonet':
@@ -135,7 +135,7 @@ def get_benchmark_by_name(model_name,
                                      meta_test=True,
                                      dataset_transform=dataset_transform)
 
-        if model_name == 'maml':
+        if model_name in ['maml', 'reptile']:
             model = ModelConvOmniglot(num_ways, hidden_size=hidden_size)
             loss_function = F.cross_entropy
         if model_name == 'protonet':
@@ -173,7 +173,7 @@ def get_benchmark_by_name(model_name,
                                          meta_test=True,
                                          dataset_transform=dataset_transform)
 
-        if model_name == 'maml':
+        if model_name in ['maml', 'reptile']:
             model = ModelConvMiniImagenet(num_ways, hidden_size=hidden_size)
             loss_function = F.cross_entropy
         if model_name == 'protonet':
