@@ -88,7 +88,6 @@ class MAMLTrainer():
                                                 max_batches=self.args.num_batches,
                                                 verbose=self.args.verbose,
                                                 desc='Validation')
-            logging.info(f"Epoch {epoch}: {results['accuracies_after']}")
             # Save best model
             if ((best_value is None)
                     or (best_value < results['accuracies_after'])):

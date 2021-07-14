@@ -105,6 +105,8 @@ def get_benchmark_by_name(model_name,
     elif name == 'omniglot':
         class_augmentations = [Rotation([90, 180, 270])]
         transform = Compose([Resize(28), ToTensor()])
+        if model_name == 'cnaps':
+            transform = Compose([Resize(84), ToTensor()])
         try:
             meta_train_dataset = Omniglot(folder,
                                           transform=transform,

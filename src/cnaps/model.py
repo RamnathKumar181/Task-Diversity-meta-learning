@@ -394,6 +394,9 @@ class Cnaps(nn.Module):
         :param target_images: (torch.tensor) Images in the target set (batch x C x H x W).
         :return: (torch.tensor) Categorical distribution on label set for each image in target set (batch x num_labels).
         """
+        if context_images.size()[1] == 1:
+            context_images = context_images.repeat(1, 3, 1, 1)
+            target_images = target_images.repeat(1, 3, 1, 1)
         # extract train and test features
         self.task_representation = self.set_encoder(context_images)
         context_features, target_features = self._get_features(context_images, target_images)
