@@ -7,6 +7,8 @@ from src.utils import seed_everything
 from src.maml import MAMLTrainer, MAMLTester
 from src.protonet import ProtonetTrainer, ProtonetTester
 from src.reptile import ReptileTrainer, ReptileTester
+from src.matching_networks import MatchingNetworksTrainer, MatchingNetworksTester
+from src.cnaps import CNAPTrainer, CNAPTester
 
 
 def parse_args():
@@ -18,7 +20,7 @@ def parse_args():
     parser.add_argument('--runs', type=int, default=5,
                         help='Number of experimental runs (default: 5).')
     parser.add_argument('--model', type=str,
-                        choices=['maml', 'protonet', 'reptile'],
+                        choices=['maml', 'protonet', 'reptile', 'matching_networks', 'cnaps'],
                         default='maml',
                         help='Name of the model to be used (default: MAML).')
     parser.add_argument('--task_sampler', type=str,
@@ -96,6 +98,7 @@ if __name__ == '__main__':
     log = Logger(args.runs)
     if args.train:
         log.reset(args.runs, info="Training Accuracy")
+
         if args.model == 'maml':
             """
             MAML Trainer
@@ -123,6 +126,25 @@ if __name__ == '__main__':
                 seed_everything(run)
                 reptile_trainer = ReptileTrainer(args)
                 log.add_result(run, reptile_trainer.get_result())
+        elif args.model == 'matching_networks':
+            """
+            MatchingNetworks Trainer
+            """
+            for run in range(args.runs):
+                gc.collect()
+                seed_everything(run)
+                mn_trainer = MatchingNetworksTrainer(args)
+                log.add_result(run, mn_trainer.get_result())
+        elif args.model == 'cnaps':
+            """
+            Conditional Neural Adaptive Processes Trainer
+            """
+            for run in range(args.runs):
+                gc.collect()
+                seed_everything(run)
+                cnaps_trainer = CNAPTrainer(args)
+                log.add_result(run, cnaps_trainer.get_result())
+
         print(f"Average Performance of {args.model} on {args.dataset}:")
         log.print_statistics()
     else:
@@ -137,6 +159,7 @@ if __name__ == '__main__':
             if args.num_batches > 0:
                 config['num_batches'] = args.num_batches
             config['verbose'] = args.verbose
+
             if args.model == 'maml':
                 """
                 MAML Test
@@ -155,6 +178,18 @@ if __name__ == '__main__':
                 """
                 reptile_tester = ReptileTester(config)
                 log.add_result(run, reptile_tester.get_result())
+            elif args.model == 'matching_networks':
+                """
+                MatchingNetworks Test
+                """
+                mn_tester = MatchingNetworksTester(config)
+                log.add_result(run, mn_tester.get_result())
+            elif args.model == 'cnaps':
+                """
+                Conditional Neural Adaptive Processes Test
+                """
+                cnap_tester = CNAPTester(config)
+                log.add_result(run, cnap_tester.get_result())
+
         print(f"Average Performance of {args.model} on {args.dataset}:")
         log.print_statistics()
-        pass
