@@ -6,6 +6,7 @@
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=20G
 #SBATCH --time=6:59:59
+#SBATCH --partition=unkillable
 
 source ../env/bin/activate
 cd .. && python -m src.main --train ./data --task_sampler no_diversity_task --dataset omniglot --num-ways 5 --num-shots 1 --use-cuda --step-size 0.4 --batch-size 32 --num-workers 8 --num-epochs 600 --output-folder ./config/
