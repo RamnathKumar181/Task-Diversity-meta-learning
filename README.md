@@ -22,3 +22,4 @@ pip install -r requirements.txt
  - Pillow 7.2.0
  - qpth 0.0.15
  - cvxpy 1.1.13
+ - numpy 1.21.0
