@@ -53,7 +53,7 @@ class CNAPTrainer():
                                                hidden_size=self.args.hidden_size)
         if self.args.task_sampler == 'no_diversity_task':
             self.meta_train_dataset.dataset._labels = random.sample(
-                self.meta_train_dataset.dataset._labels, self.args.num_ways)
+                self.benchmark.meta_train_dataset.dataset._labels, self.args.num_ways)
             self.meta_train_dataloader = BMD(self.benchmark.meta_train_dataset,
                                              batch_size=self.args.batch_size,
                                              shuffle=True,
