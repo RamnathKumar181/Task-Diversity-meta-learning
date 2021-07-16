@@ -1,4 +1,4 @@
-torch==1.7.1
+torch==1.8.1
 torchmeta==1.7.0
 Pillow==7.2.0
 qpth==0.0.15
