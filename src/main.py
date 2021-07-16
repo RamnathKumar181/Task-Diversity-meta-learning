@@ -9,6 +9,7 @@ from src.protonet import ProtonetTrainer, ProtonetTester
 from src.reptile import ReptileTrainer, ReptileTester
 from src.matching_networks import MatchingNetworksTrainer, MatchingNetworksTester
 from src.cnaps import CNAPTrainer, CNAPTester
+from src.metaoptnet import MetaOptNetTrainer, MetaOptNetTester
 
 
 def parse_args():
@@ -20,7 +21,8 @@ def parse_args():
     parser.add_argument('--runs', type=int, default=5,
                         help='Number of experimental runs (default: 5).')
     parser.add_argument('--model', type=str,
-                        choices=['maml', 'protonet', 'reptile', 'matching_networks', 'cnaps'],
+                        choices=['maml', 'protonet', 'reptile',
+                                 'matching_networks', 'cnaps', 'metaoptnet'],
                         default='maml',
                         help='Name of the model to be used (default: MAML).')
     parser.add_argument('--task_sampler', type=str,
@@ -144,6 +146,15 @@ if __name__ == '__main__':
                 seed_everything(run)
                 cnaps_trainer = CNAPTrainer(args)
                 log.add_result(run, cnaps_trainer.get_result())
+        elif args.model == 'metaoptnet':
+            """
+            MetaOptNet Trainer
+            """
+            for run in range(args.runs):
+                gc.collect()
+                seed_everything(run)
+                mon_trainer = MetaOptNetTrainer(args)
+                log.add_result(run, mon_trainer.get_result())
 
         print(f"Average Performance of {args.model} on {args.dataset}:")
         log.print_statistics()
@@ -190,6 +201,12 @@ if __name__ == '__main__':
                 """
                 cnap_tester = CNAPTester(config)
                 log.add_result(run, cnap_tester.get_result())
+            elif args.model == 'metaoptnet':
+                """
+                MetaOptNet Test
+                """
+                mon_tester = MetaOptNetTester(config)
+                log.add_result(run, mon_tester.get_result())
 
         print(f"Average Performance of {args.model} on {args.dataset}:")
         log.print_statistics()

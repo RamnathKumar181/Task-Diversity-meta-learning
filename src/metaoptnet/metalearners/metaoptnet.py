@@ -3,11 +3,10 @@ import numpy as np
 from tqdm import tqdm
 from collections import OrderedDict
 from src.utils import tensors_to_device
-from src.cnaps.metalearners.loss import CNAPsLoss, aggregate_accuracy
 
 
-class CNAPs(object):
-    """Meta-learner class for Conditional Neural Adaptive Processes [1].
+class MetaOptNet(object):
+    """Meta-learner class for MetaOptNet [1].
     Parameters
     ----------
     model : `torchmeta.modules.MetaModule` instance
@@ -39,16 +38,16 @@ class CNAPs(object):
         The device on which the model is defined.
     References
     ----------
-    .. [1] Requeima, James, et al. "Fast and flexible multi-task
-           classification using conditional neural adaptive processes."
-           Advances in Neural Information Processing Systems 32 (2019):
-           7959-7970. (https://arxiv.org/pdf/1606.04080)
+    .. [1] Lee, Kwonjoon, et al. "Meta-learning with differentiable convex
+           optimization." Proceedings of the IEEE/CVF Conference on Computer
+           Vision and Pattern Recognition. 2019.
+           (https://arxiv.org/abs/1904.03758)
     """
 
     def __init__(self, model, optimizer=None, step_size=0.1,
                  learn_step_size=False, per_param_step_size=False,
                  num_adaptation_steps=1, scheduler=None,
-                 loss_function=CNAPsLoss, device=None, num_ways=None,
+                 loss_function=torch.nn.CrossEntropyLoss(), device=None, num_ways=None,
                  num_shots=None, num_shots_test=None):
         self.model = model.to(device=device)
         self.optimizer = optimizer
@@ -60,7 +59,10 @@ class CNAPs(object):
         self.num_ways = num_ways
         self.num_shots = num_shots
         self.num_shots_test = num_shots_test
-
+        def lambda_epoch(e): return 1.0 if e < 20 else (
+            0.06 if e < 40 else 0.012 if e < 50 else (0.0024))
+        self.lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
+            self.optimizer, lr_lambda=lambda_epoch, last_epoch=-1)
         if per_param_step_size:
             self.step_size = OrderedDict((name, torch.tensor(step_size,
                                                              dtype=param.dtype, device=self.device,
@@ -100,14 +102,10 @@ class CNAPs(object):
         for task_id, (train_inputs, train_targets, test_inputs, test_targets) \
                 in enumerate(zip(*batch['train'], *batch['test'])):
 
-            target_logits = self.model(train_inputs, train_targets, test_inputs)
-            loss = self.loss_function(target_logits, test_targets)
-            regularization_term = (self.model.feature_adaptation_network.regularization_term())
-            regularizer_scaling = 0.001
-            loss += regularizer_scaling * regularization_term
-            accuracy = aggregate_accuracy(target_logits, test_targets)
+            accuracy, loss = self.model(train_inputs, train_targets, test_inputs, test_targets)
             loss.backward()
             self.optimizer.step()
+            self.lr_scheduler.step()
             results['loss'][task_id] = loss.item()
             mean_loss += loss
 

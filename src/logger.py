@@ -14,8 +14,7 @@ class Logger(object):
         self.results = [[] for _ in range(runs)]
 
     def print_statistics(self, run=None):
-        result = torch.tensor(self.results)
-        best_result = torch.tensor(result)
+        best_result = torch.tensor(self.results)
 
         r = best_result[:, 0]
         print(f'{self.info}: {r.mean():.4f} ± {r.std():.4f}'.encode('utf-8'))
