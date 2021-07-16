@@ -16,8 +16,8 @@ pip install -r requirements.txt
 
 #### Requirements
  - Python 3.8
- - PyTorch 1.7.1
- - Torchvision 0.8.2
+ - PyTorch 1.8.1
+ - Torchvision 0.9.1
  - Torchmeta 1.7.0
  - Pillow 7.2.0
  - qpth 0.0.15
