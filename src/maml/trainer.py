@@ -4,8 +4,9 @@ import os
 import logging
 import torch
 from src.maml.metalearners import ModelAgnosticMetaLearning as MAML
-
+import random
 from src.utils import get_benchmark_by_name
+from torchmeta.utils.data import BatchMetaDataLoader as BMD
 
 
 class MAMLTrainer():
@@ -50,18 +51,25 @@ class MAMLTrainer():
                                                self.args.num_shots,
                                                self.args.num_shots_test,
                                                hidden_size=self.args.hidden_size)
-        if self.args.task_sampler == 'random':
-            from torchmeta.utils.data import BatchMetaDataLoader as BMD
+        if self.args.task_sampler == 'no_diversity_task':
+            self.meta_train_dataset.dataset._labels = random.sample(
+                self.meta_train_dataset.dataset._labels, self.args.num_ways)
             self.meta_train_dataloader = BMD(self.benchmark.meta_train_dataset,
                                              batch_size=self.args.batch_size,
                                              shuffle=True,
                                              num_workers=self.args.num_workers,
                                              pin_memory=True)
-            self.meta_val_dataloader = BMD(self.benchmark.meta_val_dataset,
-                                           batch_size=self.args.batch_size,
-                                           shuffle=True,
-                                           num_workers=self.args.num_workers,
-                                           pin_memory=True)
+        else:
+            self.meta_train_dataloader = BMD(self.benchmark.meta_train_dataset,
+                                             batch_size=self.args.batch_size,
+                                             shuffle=True,
+                                             num_workers=self.args.num_workers,
+                                             pin_memory=True)
+        self.meta_val_dataloader = BMD(self.benchmark.meta_val_dataset,
+                                       batch_size=self.args.batch_size,
+                                       shuffle=True,
+                                       num_workers=self.args.num_workers,
+                                       pin_memory=True)
 
         self.meta_optimizer = torch.optim.Adam(self.benchmark.model.parameters(),
                                                lr=self.args.meta_lr)
@@ -88,6 +96,8 @@ class MAMLTrainer():
                                                 max_batches=self.args.num_batches,
                                                 verbose=self.args.verbose,
                                                 desc='Validation')
+            if (epoch+1) % self.args.log_interval == 0:
+                logging.info(f"Epoch {epoch+1}: {results['accuracies_after']}")
             # Save best model
             if ((best_value is None)
                     or (best_value < results['accuracies_after'])):

@@ -17,4 +17,4 @@ class Logger(object):
         best_result = torch.tensor(self.results)
 
         r = best_result[:, 0]
-        print(f'{self.info}: {r.mean():.4f} ± {r.std():.4f}'.encode('utf-8'))
+        print(f'{self.info}: {r.mean():.4f} (+-) {r.std():.4f}'.encode('utf-8'))

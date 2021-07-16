@@ -26,7 +26,7 @@ def parse_args():
                         default='maml',
                         help='Name of the model to be used (default: MAML).')
     parser.add_argument('--task_sampler', type=str,
-                        choices=['random'],
+                        choices=['random', 'no_diversity_task'],
                         default='random',
                         help='Type of task sampler to be used '
                         '(default: random).')
@@ -87,6 +87,9 @@ def parse_args():
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--use-cuda', action='store_true')
     parser.add_argument('--train', action='store_true')
+    parser.add_argument('--log-interval', type=int, default=100,
+                        help='Log interval of the model '
+                        '(default: 100 epochs).')
 
     args = parser.parse_args()
 
