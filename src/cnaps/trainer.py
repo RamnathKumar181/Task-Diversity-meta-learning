@@ -59,6 +59,13 @@ class CNAPTrainer():
                                              shuffle=True,
                                              num_workers=self.args.num_workers,
                                              pin_memory=True)
+        elif self.args.task_sampler == 'no_diversity_batch':
+            from src.task_sampler import BatchMetaDataLoaderNDB as BMD_NDB
+            self.meta_train_dataloader = BMD_NDB(self.benchmark.meta_train_dataset,
+                                                 batch_size=self.args.batch_size,
+                                                 shuffle=True,
+                                                 num_workers=self.args.num_workers,
+                                                 pin_memory=True)
         else:
             self.meta_train_dataloader = BMD(self.benchmark.meta_train_dataset,
                                              batch_size=self.args.batch_size,
@@ -144,13 +151,11 @@ class CNAPTester():
                                                self.config['num_shots'],
                                                self.config['num_shots_test'],
                                                hidden_size=self.config['hidden_size'])
-        if self.args.task_sampler == 'random':
-            from torchmeta.utils.data import BatchMetaDataLoader as BMD
-            self.meta_test_dataloader = BMD(self.benchmark.meta_test_dataset,
-                                            batch_size=self.config['batch_size'],
-                                            shuffle=True,
-                                            num_workers=self.config['num_workers'],
-                                            pin_memory=True)
+        self.meta_test_dataloader = BMD(self.benchmark.meta_test_dataset,
+                                        batch_size=self.config['batch_size'],
+                                        shuffle=True,
+                                        num_workers=self.config['num_workers'],
+                                        pin_memory=True)
 
     def _build_metalearner(self):
 
@@ -175,8 +180,8 @@ class CNAPTester():
         self.highest_test = results['accuracies_after']
 
     def get_result(self):
-        return tuple([self.highest_val])
+        return tuple([self.highest_test])
 
     def _device(self):
-        return torch.device('cuda' if self.args.use_cuda
+        return torch.device('cuda' if self.config['use_cuda']
                             and torch.cuda.is_available() else 'cpu')

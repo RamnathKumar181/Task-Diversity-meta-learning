@@ -87,9 +87,9 @@ def parse_args():
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--use-cuda', action='store_true')
     parser.add_argument('--train', action='store_true')
-    parser.add_argument('--log-interval', type=int, default=100,
+    parser.add_argument('--log-interval', type=int, default=50,
                         help='Log interval of the model '
-                        '(default: 100 epochs).')
+                        '(default: 50 epochs).')
 
     args = parser.parse_args()
 
@@ -100,8 +100,8 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
-    log = Logger(args.runs)
     if args.train:
+        log = Logger(args.runs)
         log.reset(args.runs, info="Training Accuracy")
 
         if args.model == 'maml':
@@ -162,8 +162,9 @@ if __name__ == '__main__':
         print(f"Average Performance of {args.model} on {args.dataset}:")
         log.print_statistics()
     else:
-        log.reset(args.runs, info="Testing Accuracy")
-        for run, config_file in glob(f'{args.output_folder}/*/config.json'):
+        log = Logger(len(glob(f'{args.output_folder}/*/config.json')))
+        log.reset(len(glob(f'{args.output_folder}/*/config.json')), info="Testing Accuracy")
+        for run, config_file in enumerate(glob(f'{args.output_folder}/*/config.json')):
             with open(config_file, 'r') as f:
                 config = json.load(f)
             if args.folder is not None:
