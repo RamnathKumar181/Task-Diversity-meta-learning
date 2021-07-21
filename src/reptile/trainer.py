@@ -4,7 +4,6 @@ import os
 import logging
 import torch
 from src.reptile.metalearners import Reptile
-import random
 from src.utils import get_benchmark_by_name
 from torchmeta.utils.data import BatchMetaDataLoader as BMD
 
@@ -52,15 +51,12 @@ class ReptileTrainer():
                                                self.args.num_shots_test,
                                                hidden_size=self.args.hidden_size)
         if self.args.task_sampler == 'no_diversity_task':
-            self.benchmark.meta_train_dataset.dataset._labels = random.sample(
-                self.benchmark.meta_train_dataset.dataset._labels, self.args.num_ways)
-            self.benchmark.meta_train_dataset.dataset._num_classes = self.args.num_ways
-
-            self.meta_train_dataloader = BMD(self.benchmark.meta_train_dataset,
-                                             batch_size=self.args.batch_size,
-                                             shuffle=True,
-                                             num_workers=self.args.num_workers,
-                                             pin_memory=True)
+            from src.task_sampler import BatchMetaDataLoaderNDT as BMD_NDT
+            self.meta_train_dataloader = BMD_NDT(self.benchmark.meta_train_dataset,
+                                                 batch_size=self.args.batch_size,
+                                                 shuffle=True,
+                                                 num_workers=self.args.num_workers,
+                                                 pin_memory=True)
         elif self.args.task_sampler == 'no_diversity_batch':
             from src.task_sampler import BatchMetaDataLoaderNDB as BMD_NDB
             self.meta_train_dataloader = BMD_NDB(self.benchmark.meta_train_dataset,
