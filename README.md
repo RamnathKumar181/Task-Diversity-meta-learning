@@ -25,5 +25,5 @@ pip install -r requirements.txt
 ### Task Samplers used in this repository
  - Uniform Task Sampler:
  <p align="center">
- <img src="https://raw.githubusercontent.com/ramnathkumar181/Task-Diversity/main/plots/uniform_task_sampler.png?raw=true" alt="Figure 1"/>
+ <img src="https://raw.githubusercontent.com/RamnathKumar181/Task-Diversity/main/plots/uniform_task_sampler.png?raw=true" alt="Figure 1"/>
  </p>
