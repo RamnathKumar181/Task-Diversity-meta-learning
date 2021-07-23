@@ -155,6 +155,9 @@ class ReptileTester():
                                         num_workers=self.config['num_workers'],
                                         pin_memory=True)
 
+        with open(self.config['model_path'], 'rb') as f:
+            self.benchmark.model.load_state_dict(torch.load(f, map_location=self.device))
+
     def _build_metalearner(self):
 
         self.metalearner = Reptile(self.benchmark.model,

@@ -149,11 +149,15 @@ class MetaOptNetTester():
                                                self.config['num_shots'],
                                                self.config['num_shots_test'],
                                                hidden_size=self.config['hidden_size'])
+
         self.meta_test_dataloader = BMD(self.benchmark.meta_test_dataset,
                                         batch_size=self.config['batch_size'],
                                         shuffle=True,
                                         num_workers=self.config['num_workers'],
                                         pin_memory=True)
+
+        with open(self.config['model_path'], 'rb') as f:
+            self.benchmark.model.load_state_dict(torch.load(f, map_location=self.device))
 
     def _build_metalearner(self):
 

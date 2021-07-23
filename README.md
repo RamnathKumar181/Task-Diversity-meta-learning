@@ -1,6 +1,4 @@
 # Task-Diversity
-Task-Diversity
-
 
 ### Getting started
 To avoid any conflict with your existing Python setup, it is suggested to work in a virtual environment with [`virtualenv`](https://docs.python-guide.org/dev/virtualenvs/). To install `virtualenv`:
@@ -23,3 +21,9 @@ pip install -r requirements.txt
  - qpth 0.0.15
  - cvxpy 1.1.13
  - numpy 1.21.0
+
+### Task Samplers used in this repository
+ - Uniform Task Sampler:
+ <p align="center">
+ <img src="https://raw.githubusercontent.com/ramnathkumar181/Task-Diversity/master/plots/uniform_task_sampler.pdf?raw=true" alt="Figure 1"/>
+ </p>

@@ -102,7 +102,7 @@ if __name__ == '__main__':
     args = parse_args()
     if args.train:
         log = Logger(args.runs)
-        log.reset(args.runs, info="Training Accuracy")
+        log.reset(args.runs, info="Validation Accuracy")
 
         if args.model == 'maml':
             """
