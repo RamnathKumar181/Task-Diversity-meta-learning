@@ -23,7 +23,14 @@ pip install -r requirements.txt
  - numpy 1.21.0
 
 ### Task Samplers used in this repository
- - Uniform Task Sampler:
- <p align="center">
- <img src="https://raw.githubusercontent.com/RamnathKumar181/Task-Diversity/main/plots/uniform_task_sampler.png?token=AMO7VYQGUSXUNUG4UOYUWS3BAPSEK" width="500"/>
- </p>
+<p align="center">
+<img src="https://raw.githubusercontent.com/RamnathKumar181/Task-Diversity/main/plots/uniform_task_sampler.png?token=AMO7VYQGUSXUNUG4UOYUWS3BAPSEK" width="500"/>
+</p>
+
+<p align="center">
+<img src="https://raw.githubusercontent.com/RamnathKumar181/Task-Diversity/main/plots/no_diversity_task_sampler.png?token=token=AMO7VYRB6Y54FDJY2UXA5GLBAPTD2" width="500"/>
+</p>
+
+<p align="center">
+<img src="https://raw.githubusercontent.com/RamnathKumar181/Task-Diversity/main/plots/no_diversity_batch_sampler.png?token=AMO7VYVXBMU3NNPDVWPSVPTBAPTHW" width="500"/>
+</p>
