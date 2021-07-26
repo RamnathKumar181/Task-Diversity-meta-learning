@@ -79,6 +79,15 @@ def parse_args():
                         help='Learning rate for the meta-optimizer '
                         '(optimization of the outer loss). The default '
                         'optimizer is Adam (default: 1e-3).')
+    parser.add_argument('--lr', type=float, default=0.01,
+                        help='Learning rate for the meta-optimizer.'
+                        'The default optimizer is SGD (default: 1e-2).')
+    parser.add_argument('--weight-decay', type=float, default=0.0005,
+                        help='Weight Decay for the meta-optimizer.'
+                        'The default optimizer is SGD (default: 5e-4).')
+    parser.add_argument('--momentum', type=float, default=0.9,
+                        help='Momentum for the meta-optimizer.'
+                        'The default optimizer is SGD (default: 0.9).')
 
     # Misc
     parser.add_argument('--num-workers', type=int, default=1,
