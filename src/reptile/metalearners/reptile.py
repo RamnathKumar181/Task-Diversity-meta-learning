@@ -57,7 +57,7 @@ class Reptile(object):
         self.scheduler = scheduler
         self.loss_function = loss_function
         self.device = device
-
+        self.model.to(device=self.device)
         if per_param_step_size:
             self.step_size = OrderedDict((name, torch.tensor(step_size,
                                                              dtype=param.dtype, device=self.device,
@@ -97,15 +97,20 @@ class Reptile(object):
             })
 
         weights_before = deepcopy(self.model.state_dict())
+        weights_after = {name: weights_before[name].zero_() for name in weights_before}
         mean_weight_diff = {name: weights_before[name].zero_() for name in weights_before}
         for task_id, (train_inputs, train_targets, test_inputs, test_targets) \
                 in enumerate(zip(*batch['train'], *batch['test'])):
 
+            train_inputs = train_inputs.to(device=self.device)
+            train_targets = train_targets.to(device=self.device)
             params, adaptation_results = self.adapt(train_inputs, train_targets,
                                                     is_classification_task=is_classification_task,
                                                     num_adaptation_steps=self.num_adaptation_steps,
                                                     step_size=self.step_size, first_order=self.first_order)
-            weights_after = self.model.state_dict()
+            for name in params:
+                weights_after[name] = params[name]
+
             results['inner_losses'][:, task_id] = adaptation_results['inner_losses']
             if is_classification_task:
                 results['accuracies_before'][task_id] = adaptation_results['accuracy_before']
@@ -113,8 +118,9 @@ class Reptile(object):
             weight_diff = {name: (weights_after[name] -
                            weights_before[name]) for name in weights_before}
             mean_weight_diff = {
-                name: mean_weight_diff[name]+weight_diff[name] for name in mean_weight_diff}
+                name: mean_weight_diff[name]+weight_diff[name] for name in weights_before}
             with torch.set_grad_enabled(self.model.training):
+                test_inputs = test_inputs.to(device=self.device)
                 test_logits = self.model(test_inputs, params=params)
 
             if is_classification_task:

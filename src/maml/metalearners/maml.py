@@ -225,11 +225,9 @@ class ModelAgnosticMetaLearning(object):
             for batch in dataloader:
                 if num_batches >= max_batches:
                     break
-
                 batch = tensors_to_device(batch, device=self.device)
                 _, results = self.get_outer_loss(batch)
                 yield results
-
                 num_batches += 1
 
 

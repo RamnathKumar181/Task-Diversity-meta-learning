@@ -81,10 +81,11 @@ class ProtonetTrainer():
                                        pin_memory=True)
 
         self.meta_optimizer = torch.optim.Adam(self.benchmark.model.parameters(),
-                                               lr=self.args.meta_lr)
+                                               lr=self.args.meta_lr,
+                                               weight_decay=self.args.weight_decay)
         self.scheduler = torch.optim.lr_scheduler.StepLR(optimizer=self.meta_optimizer,
-                                                         gamma=self.lr_scheduler_gamma,
-                                                         step_size=self.lr_scheduler_step)
+                                                         step_size=self.args.step_size,
+                                                         gamma=self.args.lr_scheduler_gamma)
 
     def _build_metalearner(self):
         self.metalearner = proto_net(self.benchmark.model,

@@ -59,7 +59,7 @@ class MatchingNetwork(object):
         self.num_ways = num_ways
         self.num_shots = num_shots
         self.num_shots_test = num_shots_test
-
+        self.model.to(device=self.device)
         if per_param_step_size:
             self.step_size = OrderedDict((name, torch.tensor(step_size,
                                                              dtype=param.dtype, device=self.device,
@@ -98,7 +98,10 @@ class MatchingNetwork(object):
         mean_loss = torch.tensor(0., device=self.device)
         for task_id, (train_inputs, train_targets, test_inputs, test_targets) \
                 in enumerate(zip(*batch['train'], *batch['test'])):
-
+            train_inputs = train_inputs.to(device=self.device)
+            train_targets = train_targets.to(device=self.device)
+            test_inputs = test_inputs.to(device=self.device)
+            test_targets = test_targets.to(device=self.device)
             accuracy, loss = self.model(train_inputs, train_targets, test_inputs, test_targets)
             loss.backward()
             self.optimizer.step()
@@ -113,7 +116,7 @@ class MatchingNetwork(object):
 
         return mean_loss, results
 
-    def train(self, dataloader, max_batches=500, verbose=True, **kwargs):
+    def train(self, dataloader, max_batches=10000, verbose=True, **kwargs):
         with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
             for results in self.train_iter(dataloader, max_batches=max_batches):
                 pbar.update(1)
@@ -123,7 +126,7 @@ class MatchingNetwork(object):
                         np.mean(results['accuracies']))
                 pbar.set_postfix(**postfix)
 
-    def train_iter(self, dataloader, max_batches=500):
+    def train_iter(self, dataloader, max_batches=1000):
         if self.optimizer is None:
             raise RuntimeError('Trying to call `train_iter`, while the '
                                'optimizer is `None`. In order to train `{0}`, you must '

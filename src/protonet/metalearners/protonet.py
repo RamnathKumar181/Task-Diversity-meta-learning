@@ -94,7 +94,7 @@ class PrototypicalNetwork(object):
 
         return mean_loss, results
 
-    def train(self, dataloader, max_batches=1, verbose=True, **kwargs):
+    def train(self, dataloader, max_batches=100, verbose=True, **kwargs):
         with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
             for results in self.train_iter(dataloader, max_batches=max_batches):
                 pbar.update(1)
@@ -104,7 +104,7 @@ class PrototypicalNetwork(object):
                         (results['accuracies']))
                 pbar.set_postfix(**postfix)
 
-    def train_iter(self, dataloader, max_batches=80000):
+    def train_iter(self, dataloader, max_batches=100):
         if self.optimizer is None:
             raise RuntimeError('Trying to call `train_iter`, while the '
                                'optimizer is `None`. In order to train `{0}`, you must '
@@ -122,34 +122,39 @@ class PrototypicalNetwork(object):
             loss, results = self.get_loss(batch)
             self.optimizer.step()
             if self.scheduler is not None:
-                self.scheduler.step(epoch=num_batches)
+                self.scheduler.step()
             yield results
+            num_batches += 1
 
-    def evaluate(self, dataloader, max_batches=1, verbose=True, **kwargs):
+    def evaluate(self, dataloader, max_batches=100, verbose=True, **kwargs):
         mean_loss, mean_accuracy, count = 0., 0., 0
         with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
             for results in self.evaluate_iter(dataloader, max_batches=max_batches):
                 pbar.update(1)
                 count += 1
-                mean_loss += results['mean_loss']
+                mean_loss += (results['mean_loss']
+                              - mean_loss) / count
                 postfix = {'loss': '{0:.4f}'.format(mean_loss)}
                 if 'accuracies' in results:
-                    mean_accuracy += results['accuracies']
+                    mean_accuracy += (np.mean(results['accuracies'])
+                                      - mean_accuracy) / count
                     postfix['accuracy'] = '{0:.4f}'.format(mean_accuracy)
                 pbar.set_postfix(**postfix)
 
         mean_results = {'mean_loss': mean_loss}
         if 'accuracies' in results:
             mean_results['accuracies'] = mean_accuracy
+
         return mean_results
 
-    def evaluate_iter(self, dataloader, max_batches=1):
+    def evaluate_iter(self, dataloader, max_batches=100):
         num_batches = 0
         self.model.eval()
-        for batch in dataloader:
-            if num_batches >= max_batches:
-                break
-
-            batch = tensors_to_device(batch, device=self.device)
-            _, results = self.get_loss(batch)
-            yield results
+        while num_batches < max_batches:
+            for batch in dataloader:
+                if num_batches >= max_batches:
+                    break
+                batch = tensors_to_device(batch, device=self.device)
+                _, results = self.get_loss(batch)
+                yield results
+                num_batches += 1

@@ -76,8 +76,11 @@ class MatchingNetworksTrainer():
                                        num_workers=self.args.num_workers,
                                        pin_memory=True)
 
-        self.meta_optimizer = torch.optim.Adam(self.benchmark.model.parameters(),
-                                               lr=self.args.meta_lr)
+        self.meta_optimizer = torch.optim.SGD(self.benchmark.model.parameters(),
+                                              lr=self.args.meta_lr,
+                                              momentum=self.args.momentum,
+                                              dampening=self.args.momentum,
+                                              weight_decay=self.args.weight_decay)
 
     def _build_metalearner(self):
         self.metalearner = MatchingNetwork(self.benchmark.model,

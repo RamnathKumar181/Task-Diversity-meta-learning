@@ -151,14 +151,14 @@ def get_benchmark_by_name(model_name,
         elif model_name == 'matching_networks':
             model = MatchingNetwork(keep_prob=0, batch_size=32, num_channels=1, fce=False, num_classes_per_set=num_ways,
                                     num_samples_per_class=num_shots, image_size=28)
-            loss_function = F.cross_entropy
+            loss_function = torch.nn.NLLLoss()
         elif model_name == 'cnaps':
             model = Cnaps()
             loss_function = CNAPsLoss
         elif model_name == 'metaoptnet':
             model = MetaOptNet(name, metaoptnet_embedding, metaoptnet_head,
                                num_ways, num_shots, num_shots_test)
-            loss_function = torch.nn.CrossEntropyLoss()
+            loss_function = torch.nn.NLLLoss()
 
     elif name == 'miniimagenet':
         transform = Compose([Resize(84), ToTensor()])
