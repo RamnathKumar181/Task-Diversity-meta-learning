@@ -26,7 +26,7 @@ pip install -r requirements.txt
 
 We experiment on many different algorithms in this repository. To this extent, we reproduce the reference paper performances, and compare our results below.
 
-|Dataset| <td colspan=4>Omniglot| <td colspan=4>MiniImagenet|
+|Dataset <td colspan=4>Omniglot <td colspan=4>MiniImagenet|
 | --- | --- | --- | --- | --- |
 | Model | 1-shot (5-way Acc.) | 5-shot (5-way Acc.) | 1 -shot (20-way Acc.) | 5-shot (20-way Acc.)|  1-shot (5-way Acc.) | 5-shot (5-way Acc.) | 1 -shot (20-way Acc.) | 5-shot (20-way Acc.)|
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
