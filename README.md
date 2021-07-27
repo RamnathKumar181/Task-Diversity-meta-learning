@@ -26,7 +26,7 @@ pip install -r requirements.txt
 
 We experiment on many different algorithms in this repository. To this extent, we reproduce the reference paper performances, and compare our results below.
 
-| Model | 1-shot (5-way Acc.) **| 5-shot (5-way Acc.) **| 1 -shot (20-way Acc.) **| 5-shot (20-way Acc.) **|  1-shot (5-way Acc.) °°| 5-shot (5-way Acc.) °°| 1 -shot (20-way Acc.) °°| 5-shot (20-way Acc.) °°|
+| Model | 1-shot (5-way Acc.) <br>**| 5-shot (5-way Acc.) <br>**| 1 -shot (20-way Acc.) <br>**| 5-shot (20-way Acc.) <br>**|  1-shot (5-way Acc.) <br>°°| 5-shot (5-way Acc.) <br>°°| 1 -shot (20-way Acc.) <br>°°| 5-shot (20-way Acc.) <br>°°|
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Protonet ([reference paper](https://arxiv.org/pdf/1703.05175.pdf)) | 98.8% | 99.7% | 96.0% | 98.9%| - | - | - | -|
 | Protonet (this repo) | - | - | - | - | - | - | - | -|
