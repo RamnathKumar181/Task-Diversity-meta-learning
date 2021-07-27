@@ -26,12 +26,12 @@ pip install -r requirements.txt
 
 We experiment on many different algorithms in this repository. To this extent, we reproduce the reference paper performances, and compare our results below.
 
-| Model | 1-shot (5-way Acc.) <br>**| 5-shot (5-way Acc.) <br>**| 1 -shot (20-way Acc.) <br>**| 5-shot (20-way Acc.) <br>**|  1-shot (5-way Acc.) <br>°°| 5-shot (5-way Acc.) <br>°°| 1 -shot (20-way Acc.) <br>°°| 5-shot (20-way Acc.) <br>°°|
+| Model | 1-shot (5-way Acc.) <br>**| 5-shot (5-way Acc.) <br>**| 1 -shot (20-way Acc.) <br>**| 5-shot (20-way Acc.) <br>**|  1-shot (5-way Acc.) <br>°°| 5-shot (5-way Acc.) <br>°°| 1 -shot (10-way Acc.) <br>°°| 5-shot (10-way Acc.) <br>°°|
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Protonet ([reference paper](https://arxiv.org/pdf/1703.05175.pdf)) | 98.8% | 99.7% | 96.0% | 98.9%| - | - | - | -|
+| Protonet ([reference paper](https://arxiv.org/pdf/1703.05175.pdf)) | 98.8% | 99.7% | 96.0% | 98.9%| 	49.42% | 68.20% | 32.9% | 49.3% |
 | Protonet (this repo) | - | - | - | - | - | - | - | -|
-| MAML ([reference paper](https://arxiv.org/pdf/1703.03400.pdf)) | 98.7% | 99.9% | 95.8% | 98.9%| - | - | - | -|
-| MAML (this repo) | - | - | - | - | - | - | - | -|
+| MAML ([reference paper](https://arxiv.org/pdf/1703.03400.pdf)) | 98.7% | 99.9% | 95.8% | 98.9%| 48.7% | 63.1% | 31.3% | 46.9%|
+| MAML (this repo) | 98.55% | - | - | - | - | - | - | -|
 
 
 \*\* denotes the Omniglot dataset.
