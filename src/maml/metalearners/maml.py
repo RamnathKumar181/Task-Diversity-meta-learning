@@ -64,7 +64,7 @@ class ModelAgnosticMetaLearning(object):
         self.scheduler = scheduler
         self.loss_function = loss_function
         self.device = device
-
+        self.model.to(device=self.device)
         if per_param_step_size:
             self.step_size = OrderedDict((name, torch.tensor(step_size,
                                                              dtype=param.dtype, device=self.device,
@@ -106,6 +106,9 @@ class ModelAgnosticMetaLearning(object):
         mean_outer_loss = torch.tensor(0., device=self.device)
         for task_id, (train_inputs, train_targets, test_inputs, test_targets) \
                 in enumerate(zip(*batch['train'], *batch['test'])):
+
+            train_inputs = train_inputs.to(device=self.device)
+            train_targets = train_targets.to(device=self.device)
             params, adaptation_results = self.adapt(train_inputs, train_targets,
                                                     is_classification_task=is_classification_task,
                                                     num_adaptation_steps=self.num_adaptation_steps,
@@ -116,6 +119,8 @@ class ModelAgnosticMetaLearning(object):
                 results['accuracies_before'][task_id] = adaptation_results['accuracy_before']
 
             with torch.set_grad_enabled(self.model.training):
+                test_inputs = test_inputs.to(device=self.device)
+                test_targets = test_targets.to(device=self.device)
                 test_logits = self.model(test_inputs, params=params)
                 outer_loss = self.loss_function(test_logits, test_targets)
                 results['outer_losses'][task_id] = outer_loss.item()

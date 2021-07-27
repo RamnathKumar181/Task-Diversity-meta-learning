@@ -38,13 +38,19 @@ class Protonet(nn.Module):
         )
 
     def forward(self, x):
-        x = self.encoder(x)
-        return x.view(x.size(0), -1)
+        y = self.encoder(x.view(-1, *x.shape[2:]))
+        return y.view(*x.shape[:2], -1)
 
 
 def Protonet_Omniglot(out_features=64, hidden_size=64):
+    """
+    Protonet Model for Omniglot
+    """
     return Protonet(1, hid_dim=hidden_size, z_dim=out_features)
 
 
 def Protonet_MiniImagenet(out_features=1600, hidden_size=64):
+    """
+    Protonet Model for MiniImagenet
+    """
     return Protonet(3, hid_dim=hidden_size, z_dim=out_features)

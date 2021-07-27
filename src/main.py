@@ -79,15 +79,11 @@ def parse_args():
                         help='Learning rate for the meta-optimizer '
                         '(optimization of the outer loss). The default '
                         'optimizer is Adam (default: 1e-3).')
-    parser.add_argument('--lr', type=float, default=0.01,
-                        help='Learning rate for the meta-optimizer.'
-                        'The default optimizer is SGD (default: 1e-2).')
-    parser.add_argument('--weight-decay', type=float, default=0.0005,
-                        help='Weight Decay for the meta-optimizer.'
-                        'The default optimizer is SGD (default: 5e-4).')
-    parser.add_argument('--momentum', type=float, default=0.9,
-                        help='Momentum for the meta-optimizer.'
-                        'The default optimizer is SGD (default: 0.9).')
+    parser.add_argument('--lr_scheduler_step', type=int, default=20,
+                        help='StepLR learning rate scheduler step, (default=20).')
+    parser.add_argument('--lr_scheduler_gamma', type=float, default=0.5,
+                        help='Learning rate for the StepLR scheduler.'
+                        '(default: 0.5).')
 
     # Misc
     parser.add_argument('--num-workers', type=int, default=1,
@@ -184,42 +180,42 @@ if __name__ == '__main__':
                 config['num_batches'] = args.num_batches
             config['verbose'] = args.verbose
 
-            if args.model == 'maml':
+            if config['model'] == 'maml':
                 """
                 MAML Test
                 """
                 maml_tester = MAMLTester(config)
                 log.add_result(run, maml_tester.get_result())
-            elif args.model == 'protonet':
+            elif config['model'] == 'protonet':
                 """
                 Protonet Test
                 """
                 protonet_tester = ProtonetTester(config)
                 log.add_result(run, protonet_tester.get_result())
-            elif args.model == 'reptile':
+            elif config['model'] == 'reptile':
                 """
                 Reptile Test
                 """
                 reptile_tester = ReptileTester(config)
                 log.add_result(run, reptile_tester.get_result())
-            elif args.model == 'matching_networks':
+            elif config['model'] == 'matching_networks':
                 """
                 MatchingNetworks Test
                 """
                 mn_tester = MatchingNetworksTester(config)
                 log.add_result(run, mn_tester.get_result())
-            elif args.model == 'cnaps':
+            elif config['model'] == 'cnaps':
                 """
                 Conditional Neural Adaptive Processes Test
                 """
                 cnap_tester = CNAPTester(config)
                 log.add_result(run, cnap_tester.get_result())
-            elif args.model == 'metaoptnet':
+            elif config['model'] == 'metaoptnet':
                 """
                 MetaOptNet Test
                 """
                 mon_tester = MetaOptNetTester(config)
                 log.add_result(run, mon_tester.get_result())
 
-        print(f"Average Performance of {args.model} on {args.dataset}:")
+        print(f"Average Performance of {config['model']} on {args.dataset}:")
         log.print_statistics()

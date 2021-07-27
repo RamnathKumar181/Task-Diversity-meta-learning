@@ -6,6 +6,10 @@ __all__ = ['MetaSGD']
 
 
 class MetaSGD(ModelAgnosticMetaLearning):
+    """
+    MetaSGD Model
+    """
+
     def __init__(self, model, optimizer=None, init_step_size=0.1,
                  num_adaptation_steps=1, scheduler=None,
                  loss_function=F.cross_entropy, device=None):

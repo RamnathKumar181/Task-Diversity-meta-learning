@@ -107,18 +107,23 @@ class MetaMLPModel(MetaModule):
 
 
 def ModelConvOmniglot(out_features, hidden_size=64):
+    """
+    ConvNet Model for Omniglot
+    """
     return MetaConvModel(1, out_features, hidden_size=hidden_size,
                          feature_size=hidden_size)
 
 
 def ModelConvMiniImagenet(out_features, hidden_size=64):
+    """
+    ConvNet Model for MiniImagenet
+    """
     return MetaConvModel(3, out_features, hidden_size=hidden_size,
                          feature_size=5 * 5 * hidden_size)
 
 
 def ModelMLPSinusoid(hidden_sizes=[40, 40]):
+    """
+    MLP Model for Sinusoid
+    """
     return MetaMLPModel(1, 1, hidden_sizes)
-
-
-if __name__ == '__main__':
-    model = ModelMLPSinusoid()

@@ -9,6 +9,10 @@ from torchmeta.utils.data import BatchMetaDataLoader as BMD
 
 
 class MAMLTrainer():
+    """
+    MAML Trainer
+    """
+
     def __init__(self, args):
         self.args = args
         self.highest_val = 0
@@ -129,6 +133,10 @@ class MAMLTrainer():
 
 
 class MAMLTester():
+    """
+    MAML Tester
+    """
+
     def __init__(self, config):
         self.config = config
         self.highest_test = 0

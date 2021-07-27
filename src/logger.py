@@ -2,6 +2,10 @@ import torch
 
 
 class Logger(object):
+    """
+    Logger Class
+    """
+
     def __init__(self, runs, info=None):
         self.info = info
         self.results = [[] for _ in range(runs)]

@@ -2,7 +2,6 @@ import torch
 import numpy as np
 from tqdm import tqdm
 
-from collections import OrderedDict
 from src.utils import tensors_to_device
 from src.protonet.metalearners.loss import prototypical_loss, get_prototypes
 
@@ -46,39 +45,15 @@ class PrototypicalNetwork(object):
            Systems. 2017. (https://arxiv.org/abs/1703.05175)
     """
 
-    def __init__(self, model, optimizer=None, step_size=0.1,
-                 learn_step_size=False, per_param_step_size=False,
-                 num_adaptation_steps=1, scheduler=None,
-                 loss_function=prototypical_loss, device=None, num_ways=None,
-                 num_shots=None, num_shots_test=None):
+    def __init__(self, model, optimizer=None, scheduler=None,
+                 loss_function=prototypical_loss, device=None, num_ways=None):
         self.model = model.to(device=device)
         self.optimizer = optimizer
-        self.step_size = step_size
-        self.num_adaptation_steps = num_adaptation_steps
         self.scheduler = scheduler
         self.loss_function = loss_function
         self.device = device
         self.num_ways = num_ways
-        self.num_shots = num_shots
-        self.num_shots_test = num_shots_test
-
-        if per_param_step_size:
-            self.step_size = OrderedDict((name, torch.tensor(step_size,
-                                                             dtype=param.dtype, device=self.device,
-                                                             requires_grad=learn_step_size)) for (name, param)
-                                         in model.meta_named_parameters())
-        else:
-            self.step_size = torch.tensor(step_size, dtype=torch.float32,
-                                          device=self.device, requires_grad=learn_step_size)
-
-        if (self.optimizer is not None) and learn_step_size:
-            self.optimizer.add_param_group({'params': self.step_size.values()
-                                            if per_param_step_size else [self.step_size]})
-            if scheduler is not None:
-                for group in self.optimizer.param_groups:
-                    group.setdefault('initial_lr', group['lr'])
-                self.scheduler.base_lrs([group['initial_lr']
-                                         for group in self.optimizer.param_groups])
+        self.model.to(device=self.device)
 
     def get_loss(self, batch):
         if 'test' not in batch:
@@ -96,25 +71,26 @@ class PrototypicalNetwork(object):
             results.update({
                 'accuracies': np.zeros((num_tasks,), dtype=np.float32)
             })
-
+        self.model.zero_grad()
         mean_loss = torch.tensor(0., device=self.device)
-        for task_id, (train_inputs, train_targets, test_inputs, test_targets) \
-                in enumerate(zip(*batch['train'], *batch['test'])):
-            train_embeddings = self.model(train_inputs)
-            prototypes = get_prototypes(train_embeddings, train_targets)
-            test_embeddings = self.model(test_inputs)
-            loss, accuracy = self.loss_function(
-                prototypes, test_embeddings, targets=test_targets, n_query=self.num_shots_test)
-            loss.backward()
-            self.optimizer.step()
-            results['loss'][task_id] = loss.item()
-            mean_loss += loss
+        train_inputs, train_targets = batch['train']
+        test_inputs, test_targets = batch['test']
+        train_inputs = train_inputs.to(device=self.device)
+        train_targets = train_targets.to(device=self.device)
+        test_inputs = test_inputs.to(device=self.device)
+        test_targets = test_targets.to(device=self.device)
+        train_embeddings = self.model(train_inputs)
+        prototypes = get_prototypes(train_embeddings, train_targets, self.num_ways)
+        test_embeddings = self.model(test_inputs)
+        loss, accuracy = self.loss_function(
+            prototypes, test_embeddings, test_targets)
+        loss.backward()
 
-            if is_classification_task:
-                results['accuracies'][task_id] = accuracy
+        if is_classification_task:
+            results['accuracies'] = accuracy.item()
 
         mean_loss.div_(num_tasks)
-        results['mean_loss'] = mean_loss.item()
+        results['mean_loss'] = loss.item()
 
         return mean_loss, results
 
@@ -125,7 +101,7 @@ class PrototypicalNetwork(object):
                 postfix = {'loss': '{0:.4f}'.format(results['mean_loss'])}
                 if 'accuracies' in results:
                     postfix['accuracy'] = '{0:.4f}'.format(
-                        np.mean(results['accuracies']))
+                        (results['accuracies']))
                 pbar.set_postfix(**postfix)
 
     def train_iter(self, dataloader, max_batches=80000):
@@ -137,20 +113,17 @@ class PrototypicalNetwork(object):
                                'parameters(), lr=0.01), ...).'.format(__class__.__name__))
         num_batches = 0
         self.model.train()
-        while num_batches < max_batches:
-            for batch in dataloader:
-                if num_batches >= max_batches:
-                    break
+        for batch in dataloader:
+            if num_batches >= max_batches:
+                break
+            self.optimizer.zero_grad()
 
-                if self.scheduler is not None:
-                    self.scheduler.step(epoch=num_batches)
-
-                self.optimizer.zero_grad()
-
-                batch = tensors_to_device(batch, device=self.device)
-                loss, results = self.get_loss(batch)
-                yield results
-                num_batches += 1
+            batch = tensors_to_device(batch, device=self.device)
+            loss, results = self.get_loss(batch)
+            self.optimizer.step()
+            if self.scheduler is not None:
+                self.scheduler.step(epoch=num_batches)
+            yield results
 
     def evaluate(self, dataloader, max_batches=1, verbose=True, **kwargs):
         mean_loss, mean_accuracy, count = 0., 0., 0
@@ -158,31 +131,25 @@ class PrototypicalNetwork(object):
             for results in self.evaluate_iter(dataloader, max_batches=max_batches):
                 pbar.update(1)
                 count += 1
-                mean_loss += (results['mean_loss']
-                              - mean_loss) / count
+                mean_loss += results['mean_loss']
                 postfix = {'loss': '{0:.4f}'.format(mean_loss)}
                 if 'accuracies' in results:
-                    mean_accuracy += (np.mean(results['accuracies'])
-                                      - mean_accuracy) / count
+                    mean_accuracy += results['accuracies']
                     postfix['accuracy'] = '{0:.4f}'.format(mean_accuracy)
                 pbar.set_postfix(**postfix)
 
         mean_results = {'mean_loss': mean_loss}
         if 'accuracies' in results:
             mean_results['accuracies'] = mean_accuracy
-
         return mean_results
 
-    def evaluate_iter(self, dataloader, max_batches=80000):
+    def evaluate_iter(self, dataloader, max_batches=1):
         num_batches = 0
         self.model.eval()
-        while num_batches < max_batches:
-            for batch in dataloader:
-                if num_batches >= max_batches:
-                    break
+        for batch in dataloader:
+            if num_batches >= max_batches:
+                break
 
-                batch = tensors_to_device(batch, device=self.device)
-                _, results = self.get_loss(batch)
-                yield results
-
-                num_batches += 1
+            batch = tensors_to_device(batch, device=self.device)
+            _, results = self.get_loss(batch)
+            yield results

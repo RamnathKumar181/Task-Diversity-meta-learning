@@ -9,6 +9,10 @@ from torchmeta.utils.data import BatchMetaDataLoader as BMD
 
 
 class ProtonetTrainer():
+    """
+    Protonet Trainer
+    """
+
     def __init__(self, args):
         self.args = args
         self.highest_val = 0
@@ -76,21 +80,19 @@ class ProtonetTrainer():
                                        num_workers=self.args.num_workers,
                                        pin_memory=True)
 
-        self.meta_optimizer = torch.optim.SGD(self.benchmark.model.parameters(),
-                                              weight_decay=self.args.weight_decay,
-                                              lr=self.args.lr,
-                                              momentum=self.args.momentum)
+        self.meta_optimizer = torch.optim.Adam(self.benchmark.model.parameters(),
+                                               lr=self.args.meta_lr)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(optimizer=self.meta_optimizer,
+                                                         gamma=self.lr_scheduler_gamma,
+                                                         step_size=self.lr_scheduler_step)
 
     def _build_metalearner(self):
         self.metalearner = proto_net(self.benchmark.model,
                                      self.meta_optimizer,
-                                     num_adaptation_steps=self.args.num_steps,
-                                     step_size=self.args.step_size,
+                                     self.scheduler,
                                      loss_function=self.benchmark.loss_function,
                                      device=self.device,
-                                     num_ways=self.args.num_ways,
-                                     num_shots=self.args.num_shots,
-                                     num_shots_test=self.args.num_shots_test)
+                                     num_ways=self.args.num_ways)
 
     def _train(self):
         best_value = None
@@ -104,6 +106,7 @@ class ProtonetTrainer():
                                                 max_batches=self.args.num_batches,
                                                 verbose=self.args.verbose,
                                                 desc='Validation')
+
             if (epoch+1) % self.args.log_interval == 0:
                 logging.info(f"Epoch {epoch+1}: {results['accuracies']}")
             # Save best model
@@ -118,7 +121,6 @@ class ProtonetTrainer():
                 with open(self.args.model_path, 'wb') as f:
                     torch.save(self.benchmark.model.state_dict(), f)
         self.highest_val = results['accuracies']
-
         if hasattr(self.benchmark.meta_train_dataset, 'close'):
             self.benchmark.meta_train_dataset.close()
             self.benchmark.meta_val_dataset.close()
@@ -132,6 +134,10 @@ class ProtonetTrainer():
 
 
 class ProtonetTester():
+    """
+    Protonet Tester
+    """
+
     def __init__(self, config):
         self.config = config
         self.highest_test = 0
@@ -164,9 +170,6 @@ class ProtonetTester():
     def _build_metalearner(self):
 
         self.metalearner = proto_net(self.benchmark.model,
-                                     first_order=self.config['first_order'],
-                                     num_adaptation_steps=self.config['num_steps'],
-                                     step_size=self.config['step_size'],
                                      loss_function=self.benchmark.loss_function,
                                      device=self.device,
                                      num_ways=self.config['num_ways'])
@@ -180,7 +183,7 @@ class ProtonetTester():
         with open(os.path.join(dirname, 'results.json'), 'w') as f:
             json.dump(results, f)
 
-        self.highest_test = results['accuracies_after']
+        self.highest_test = results['accuracies']
 
     def get_result(self):
         return tuple([self.highest_test])
