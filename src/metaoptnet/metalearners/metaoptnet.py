@@ -95,23 +95,27 @@ class MetaOptNet(object):
             })
 
         mean_loss = torch.tensor(0., device=self.device)
-        for task_id, (train_inputs, train_targets, test_inputs, test_targets) \
-                in enumerate(zip(*batch['train'], *batch['test'])):
 
-            accuracy, loss = self.model(train_inputs, train_targets, test_inputs, test_targets)
-            loss.backward()
-            results['loss'][task_id] = loss.item()
-            mean_loss += loss
+        train_inputs, train_targets = batch['train']
+        test_inputs, test_targets = batch['test']
+        train_inputs = train_inputs.to(device=self.device)
+        train_targets = train_targets.to(device=self.device)
+        test_inputs = test_inputs.to(device=self.device)
+        test_targets = test_targets.to(device=self.device)
+        accuracy, loss = self.model(train_inputs, train_targets, test_inputs, test_targets)
+        loss.backward()
+        results['loss'] = loss.item()
+        mean_loss += loss
 
-            if is_classification_task:
-                results['accuracies'][task_id] = accuracy.item()
+        if is_classification_task:
+            results['accuracies'] = accuracy
 
         mean_loss.div_(num_tasks)
         results['mean_loss'] = mean_loss.item()
 
         return mean_loss, results
 
-    def train(self, dataloader, max_batches=8000, verbose=True, **kwargs):
+    def train(self, dataloader, max_batches=100, verbose=True, **kwargs):
         with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
             for results in self.train_iter(dataloader, max_batches=max_batches):
                 pbar.update(1)
@@ -143,7 +147,7 @@ class MetaOptNet(object):
                 yield results
                 num_batches += 1
 
-    def evaluate(self, dataloader, max_batches=2000, verbose=True, **kwargs):
+    def evaluate(self, dataloader, max_batches=1000, verbose=True, **kwargs):
         mean_loss, mean_accuracy, count = 0., 0., 0
         with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
             for results in self.evaluate_iter(dataloader, max_batches=max_batches):

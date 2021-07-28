@@ -90,7 +90,7 @@ class MetaOptNetTrainer():
     def _build_metalearner(self):
         self.metalearner = MetaOptNet(self.benchmark.model,
                                       self.meta_optimizer,
-                                      self.scheduler,
+                                      scheduler=self.scheduler,
                                       num_adaptation_steps=self.args.num_steps,
                                       step_size=self.args.step_size,
                                       loss_function=self.benchmark.loss_function,

@@ -84,10 +84,10 @@ def parse_args():
     parser.add_argument('--lr_scheduler_gamma', type=float, default=0.5,
                         help='Learning rate for the StepLR scheduler.'
                         '(default: 0.5).')
-    parser.add_argument('--weight_decay', type=float, default=0.0,
+    parser.add_argument('--weight_decay', type=float, default=5e-4,
                         help='Weight decay for optimizer.'
                         '(default: 0.5).')
-    parser.add_argument('--momentum', type=float, default=0.0,
+    parser.add_argument('--momentum', type=float, default=0.9,
                         help='Momentum for optimizer.'
                         '(default: 0.5).')
 
@@ -98,9 +98,9 @@ def parse_args():
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--use-cuda', action='store_true')
     parser.add_argument('--train', action='store_true')
-    parser.add_argument('--log-interval', type=int, default=50,
+    parser.add_argument('--log-interval', type=int, default=1,
                         help='Log interval of the model '
-                        '(default: 50 epochs).')
+                        '(default: 1 epoch).')
 
     args = parser.parse_args()
 
