@@ -87,6 +87,9 @@ def parse_args():
     parser.add_argument('--weight_decay', type=float, default=0.0,
                         help='Weight decay for optimizer.'
                         '(default: 0.5).')
+    parser.add_argument('--momentum', type=float, default=0.0,
+                        help='Momentum for optimizer.'
+                        '(default: 0.5).')
 
     # Misc
     parser.add_argument('--num-workers', type=int, default=1,

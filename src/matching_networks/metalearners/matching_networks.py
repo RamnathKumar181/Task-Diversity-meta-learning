@@ -96,34 +96,34 @@ class MatchingNetwork(object):
             })
 
         mean_loss = torch.tensor(0., device=self.device)
-        for task_id, (train_inputs, train_targets, test_inputs, test_targets) \
-                in enumerate(zip(*batch['train'], *batch['test'])):
-            train_inputs = train_inputs.to(device=self.device)
-            train_targets = train_targets.to(device=self.device)
-            test_inputs = test_inputs.to(device=self.device)
-            test_targets = test_targets.to(device=self.device)
-            accuracy, loss = self.model(train_inputs, train_targets, test_inputs, test_targets)
-            loss.backward()
-            self.optimizer.step()
-            results['loss'][task_id] = loss.item()
-            mean_loss += loss
+        train_inputs, train_targets = batch['train']
+        test_inputs, test_targets = batch['test']
+        train_inputs = train_inputs.to(device=self.device)
+        train_targets = train_targets.to(device=self.device)
+        test_inputs = test_inputs.to(device=self.device)
+        test_targets = test_targets.to(device=self.device)
+        accuracy, loss = self.model(train_inputs, train_targets,
+                                    test_inputs, test_targets, self.num_ways)
+        loss.backward()
+        results['loss'] = loss.item()
+        mean_loss += loss
 
-            if is_classification_task:
-                results['accuracies'][task_id] = accuracy
+        if is_classification_task:
+            results['accuracies'] = accuracy.item()
 
         mean_loss.div_(num_tasks)
         results['mean_loss'] = mean_loss.item()
 
         return mean_loss, results
 
-    def train(self, dataloader, max_batches=10000, verbose=True, **kwargs):
+    def train(self, dataloader, max_batches=100, verbose=True, **kwargs):
         with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
             for results in self.train_iter(dataloader, max_batches=max_batches):
                 pbar.update(1)
                 postfix = {'loss': '{0:.4f}'.format(results['mean_loss'])}
                 if 'accuracies' in results:
                     postfix['accuracy'] = '{0:.4f}'.format(
-                        np.mean(results['accuracies']))
+                        results['accuracies'])
                 pbar.set_postfix(**postfix)
 
     def train_iter(self, dataloader, max_batches=1000):
@@ -147,10 +147,11 @@ class MatchingNetwork(object):
 
                 batch = tensors_to_device(batch, device=self.device)
                 loss, results = self.get_loss(batch)
+                self.optimizer.step()
                 yield results
                 num_batches += 1
 
-    def evaluate(self, dataloader, max_batches=500, verbose=True, **kwargs):
+    def evaluate(self, dataloader, max_batches=100, verbose=True, **kwargs):
         mean_loss, mean_accuracy, count = 0., 0., 0
         with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
             for results in self.evaluate_iter(dataloader, max_batches=max_batches):
@@ -178,9 +179,7 @@ class MatchingNetwork(object):
             for batch in dataloader:
                 if num_batches >= max_batches:
                     break
-
                 batch = tensors_to_device(batch, device=self.device)
                 _, results = self.get_loss(batch)
                 yield results
-
                 num_batches += 1

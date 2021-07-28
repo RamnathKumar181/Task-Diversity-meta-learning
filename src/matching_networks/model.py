@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
-import math
 from torch.autograd import Variable
 import torch.nn.functional as F
+from torchmeta.utils.matching import matching_log_probas, matching_loss
 
 
 def convLayer(in_channels, out_channels, keep_prob=0.0):
@@ -32,9 +32,6 @@ class Classifier(nn.Module):
         self.layer3 = convLayer(layer_size, layer_size, keep_prob)
         self.layer4 = convLayer(layer_size, layer_size, keep_prob)
 
-        finalSize = int(math.floor(image_size / (2 * 2 * 2 * 2)))
-        self.outSize = finalSize * finalSize * layer_size
-
     def forward(self, image_input):
         """
         Use CNN defined above
@@ -45,7 +42,6 @@ class Classifier(nn.Module):
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
-        x = x.view(x.size()[0], -1)
         return x
 
 
@@ -157,7 +153,7 @@ class MatchingNetwork(nn.Module):
             self.lstm = BidirectionalLSTM(
                 layer_size=[32], batch_size=self.batch_size, vector_dim=self.g.outSize)
 
-    def forward(self, support_set_images, support_set_y, target_image, target_y):
+    def forward(self, support_set_images, train_targets, target_image, test_targets, num_ways):
         """
         Main process of the network
         :param support_set_images: shape[batch_size,sequence_length,num_channels,image_size,image_size]
@@ -167,32 +163,54 @@ class MatchingNetwork(nn.Module):
         :return:
         """
 
-        # produce embeddings for support set images
-        support_set_y_one_hot = F.one_hot(support_set_y)
-        support_images_encoded = self.g(support_set_images)
-
-        # produce embeddings for target images
-        target_image_encoded = self.g(target_image)
-
-        # use fce?
+        support_images_encoded = self.g(support_set_images.view(-1, *support_set_images.shape[2:]))
+        train_embeddings = support_images_encoded.view(*support_set_images.shape[:2], -1)
+        target_images_encoded = self.g(target_image.view(-1, *target_image.shape[2:]))
+        test_embeddings = target_images_encoded.view(*target_image.shape[:2], -1)
         if self.fce:
-            support_images_encoded = self.lstm(support_images_encoded)
-            target_image_encoded = self.lstm(target_image_encoded)
+            train_embeddings = self.lstm(
+                train_embeddings.view(-1, *support_set_images.shape[2:])).view(*support_set_images.shape[:2], -1)
+            test_embeddings = self.lstm(
+                target_images_encoded.view(-1, *target_image.shape[2:])).view(*target_image.shape[:2], -1)
+        loss = matching_loss(train_embeddings,
+                             train_targets,
+                             test_embeddings,
+                             test_targets,
+                             num_ways)
+        with torch.no_grad():
+            # calculate the accuracy
+            log_probas = matching_log_probas(train_embeddings,
+                                             train_targets,
+                                             test_embeddings,
+                                             num_ways)
+            test_predictions = torch.argmax(log_probas, dim=1)
+            accuracy = torch.mean((test_predictions == test_targets).float())
+        # # produce embeddings for support set images
+        # support_set_y_one_hot = F.one_hot(support_set_y)
+        # support_images_encoded = self.g(support_set_images)
+        #
+        # # produce embeddings for target images
+        # target_image_encoded = self.g(target_image)
+        #
+        # # use fce?
+        # if self.fce:
+        #     support_images_encoded = self.lstm(support_images_encoded)
+        #     target_image_encoded = self.lstm(target_image_encoded)
+        #
+        # batch_size, embedding = support_images_encoded.size()
+        # # get similarities between support set embeddings and target
+        #
+        # similarity = self.dn(support_images_encoded.unsqueeze(
+        #     0).view(-1, batch_size, embedding), target_image_encoded).squeeze(1)
+        #
+        # # produce predictions for target probabilities
+        # preds = self.classify(
+        #     similarity.squeeze(0), support_set_y=support_set_y_one_hot.float().unsqueeze(0))
+        #
+        # # calculate the accuracy
+        #
+        # values, indices = preds.max(1)
+        # accuracy = torch.mean((indices.squeeze() == target_y).float())
+        # crossentropy_loss = F.cross_entropy(preds, target_y.long())
 
-        batch_size, embedding = support_images_encoded.size()
-        # get similarities between support set embeddings and target
-
-        similarity = self.dn(support_images_encoded.unsqueeze(
-            0).view(-1, batch_size, embedding), target_image_encoded).squeeze(1)
-
-        # produce predictions for target probabilities
-        preds = self.classify(
-            similarity.squeeze(0), support_set_y=support_set_y_one_hot.float().unsqueeze(0))
-
-        # calculate the accuracy
-
-        values, indices = preds.max(1)
-        accuracy = torch.mean((indices.squeeze() == target_y).float())
-        crossentropy_loss = F.cross_entropy(preds, target_y.long())
-
-        return accuracy, crossentropy_loss
+        return accuracy, loss
