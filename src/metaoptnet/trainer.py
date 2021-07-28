@@ -76,12 +76,21 @@ class MetaOptNetTrainer():
                                        num_workers=self.args.num_workers,
                                        pin_memory=True)
 
-        self.meta_optimizer = torch.optim.Adam(self.benchmark.model.parameters(),
-                                               lr=self.args.meta_lr)
+        self.meta_optimizer = torch.optim.SGD(self.benchmark.model.parameters(),
+                                              lr=self.args.meta_lr,
+                                              momentum=self.args.momentum,
+                                              weight_decay=self.args.weight_decay,
+                                              nesterov=True)
+
+        def lambda_epoch(e): return 1.0 if e < 20 else (
+            0.06 if e < 40 else 0.012 if e < 50 else (0.0024))
+        self.scheduler = torch.optim.lr_scheduler.LambdaLR(
+            self.meta_optimizer, lr_lambda=lambda_epoch, last_epoch=-1)
 
     def _build_metalearner(self):
         self.metalearner = MetaOptNet(self.benchmark.model,
                                       self.meta_optimizer,
+                                      self.scheduler,
                                       num_adaptation_steps=self.args.num_steps,
                                       step_size=self.args.step_size,
                                       loss_function=self.benchmark.loss_function,

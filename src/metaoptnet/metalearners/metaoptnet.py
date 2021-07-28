@@ -59,10 +59,6 @@ class MetaOptNet(object):
         self.num_ways = num_ways
         self.num_shots = num_shots
         self.num_shots_test = num_shots_test
-        def lambda_epoch(e): return 1.0 if e < 20 else (
-            0.06 if e < 40 else 0.012 if e < 50 else (0.0024))
-        self.lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
-            self.optimizer, lr_lambda=lambda_epoch, last_epoch=-1)
         if per_param_step_size:
             self.step_size = OrderedDict((name, torch.tensor(step_size,
                                                              dtype=param.dtype, device=self.device,
@@ -104,20 +100,18 @@ class MetaOptNet(object):
 
             accuracy, loss = self.model(train_inputs, train_targets, test_inputs, test_targets)
             loss.backward()
-            self.optimizer.step()
-            self.lr_scheduler.step()
             results['loss'][task_id] = loss.item()
             mean_loss += loss
 
             if is_classification_task:
-                results['accuracies'][task_id] = accuracy
+                results['accuracies'][task_id] = accuracy.item()
 
         mean_loss.div_(num_tasks)
         results['mean_loss'] = mean_loss.item()
 
         return mean_loss, results
 
-    def train(self, dataloader, max_batches=500, verbose=True, **kwargs):
+    def train(self, dataloader, max_batches=8000, verbose=True, **kwargs):
         with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
             for results in self.train_iter(dataloader, max_batches=max_batches):
                 pbar.update(1)
@@ -140,18 +134,16 @@ class MetaOptNet(object):
             for batch in dataloader:
                 if num_batches >= max_batches:
                     break
-
-                if self.scheduler is not None:
-                    self.scheduler.step(epoch=num_batches)
-
                 self.optimizer.zero_grad()
-
                 batch = tensors_to_device(batch, device=self.device)
                 loss, results = self.get_loss(batch)
+                self.optimizer.step()
+                if self.scheduler is not None:
+                    self.scheduler.step(epoch=num_batches)
                 yield results
                 num_batches += 1
 
-    def evaluate(self, dataloader, max_batches=500, verbose=True, **kwargs):
+    def evaluate(self, dataloader, max_batches=2000, verbose=True, **kwargs):
         mean_loss, mean_accuracy, count = 0., 0., 0
         with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
             for results in self.evaluate_iter(dataloader, max_batches=max_batches):

@@ -116,7 +116,7 @@ class MatchingNetwork(object):
 
         return mean_loss, results
 
-    def train(self, dataloader, max_batches=100, verbose=True, **kwargs):
+    def train(self, dataloader, max_batches=1000, verbose=True, **kwargs):
         with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
             for results in self.train_iter(dataloader, max_batches=max_batches):
                 pbar.update(1)
@@ -151,7 +151,7 @@ class MatchingNetwork(object):
                 yield results
                 num_batches += 1
 
-    def evaluate(self, dataloader, max_batches=100, verbose=True, **kwargs):
+    def evaluate(self, dataloader, max_batches=500, verbose=True, **kwargs):
         mean_loss, mean_accuracy, count = 0., 0., 0
         with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
             for results in self.evaluate_iter(dataloader, max_batches=max_batches):
