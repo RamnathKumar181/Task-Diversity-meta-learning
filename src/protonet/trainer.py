@@ -81,8 +81,7 @@ class ProtonetTrainer():
                                        pin_memory=True)
 
         self.meta_optimizer = torch.optim.Adam(self.benchmark.model.parameters(),
-                                               lr=self.args.meta_lr,
-                                               weight_decay=self.args.weight_decay)
+                                               lr=self.args.meta_lr)
         self.scheduler = torch.optim.lr_scheduler.StepLR(optimizer=self.meta_optimizer,
                                                          step_size=self.args.step_size,
                                                          gamma=self.args.lr_scheduler_gamma)

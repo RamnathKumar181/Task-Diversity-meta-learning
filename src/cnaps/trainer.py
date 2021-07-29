@@ -115,7 +115,7 @@ class CNAPTrainer():
             if save_model and (self.args.output_folder is not None):
                 with open(self.args.model_path, 'wb') as f:
                     torch.save(self.benchmark.model.state_dict(), f)
-        self.highest_val = results['accuracies']
+        self.highest_val = best_value
 
         if hasattr(self.benchmark.meta_train_dataset, 'close'):
             self.benchmark.meta_train_dataset.close()

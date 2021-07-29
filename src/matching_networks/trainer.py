@@ -77,7 +77,8 @@ class MatchingNetworksTrainer():
                                        pin_memory=True)
 
         self.meta_optimizer = torch.optim.Adam(self.benchmark.model.parameters(),
-                                               lr=self.args.meta_lr)
+                                               lr=self.args.meta_lr,
+                                               weight_decay=self.args.weight_decay)
 
     def _build_metalearner(self):
         self.metalearner = MatchingNetwork(self.benchmark.model,
@@ -115,7 +116,7 @@ class MatchingNetworksTrainer():
             if save_model and (self.args.output_folder is not None):
                 with open(self.args.model_path, 'wb') as f:
                     torch.save(self.benchmark.model.state_dict(), f)
-        self.highest_val = results['accuracies']
+        self.highest_val = best_value
 
         if hasattr(self.benchmark.meta_train_dataset, 'close'):
             self.benchmark.meta_train_dataset.close()
@@ -162,7 +163,6 @@ class MatchingNetworksTester():
     def _build_metalearner(self):
 
         self.metalearner = MatchingNetwork(self.benchmark.model,
-                                           first_order=self.config['first_order'],
                                            num_adaptation_steps=self.config['num_steps'],
                                            step_size=self.config['step_size'],
                                            loss_function=self.benchmark.loss_function,

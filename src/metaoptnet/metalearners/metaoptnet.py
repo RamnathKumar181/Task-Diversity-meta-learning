@@ -95,20 +95,19 @@ class MetaOptNet(object):
             })
 
         mean_loss = torch.tensor(0., device=self.device)
+        for task_id, (train_inputs, train_targets, test_inputs, test_targets) \
+                in enumerate(zip(*batch['train'], *batch['test'])):
+            train_inputs = train_inputs.to(device=self.device)
+            train_targets = train_targets.to(device=self.device)
+            test_inputs = test_inputs.to(device=self.device)
+            test_targets = test_targets.to(device=self.device)
+            accuracy, loss = self.model(train_inputs, train_targets, test_inputs, test_targets)
+            loss.backward()
+            results['loss'] = loss.item()
+            mean_loss += loss
 
-        train_inputs, train_targets = batch['train']
-        test_inputs, test_targets = batch['test']
-        train_inputs = train_inputs.to(device=self.device)
-        train_targets = train_targets.to(device=self.device)
-        test_inputs = test_inputs.to(device=self.device)
-        test_targets = test_targets.to(device=self.device)
-        accuracy, loss = self.model(train_inputs, train_targets, test_inputs, test_targets)
-        loss.backward()
-        results['loss'] = loss.item()
-        mean_loss += loss
-
-        if is_classification_task:
-            results['accuracies'] = accuracy
+            if is_classification_task:
+                results['accuracies'] = accuracy
 
         mean_loss.div_(num_tasks)
         results['mean_loss'] = mean_loss.item()
