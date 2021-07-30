@@ -67,7 +67,7 @@ def get_benchmark_by_name(model_name,
                           num_shots,
                           num_shots_test,
                           hidden_size=None,
-                          metaoptnet_embedding='ProtoNet',
+                          metaoptnet_embedding='ResNet',
                           metaoptnet_head='SVM-CS'):
     """Get dataset, model and loss function"""
     from src.maml.model import ModelConvOmniglot, ModelConvMiniImagenet, ModelMLPSinusoid

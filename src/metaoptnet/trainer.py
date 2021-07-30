@@ -187,7 +187,7 @@ class MetaOptNetTester():
         with open(os.path.join(dirname, 'results.json'), 'w') as f:
             json.dump(results, f)
 
-        self.highest_test = results['accuracies_after']
+        self.highest_test = results['accuracies']
 
     def get_result(self):
         return tuple([self.highest_test])
