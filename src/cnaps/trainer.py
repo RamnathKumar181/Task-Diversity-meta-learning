@@ -6,6 +6,7 @@ import torch
 from src.cnaps.metalearners import CNAPs
 from torchmeta.utils.data import BatchMetaDataLoader as BMD
 from src.utils import get_benchmark_by_name
+from src.cnaps.model import TaskNormI
 
 
 class CNAPTrainer():
@@ -76,8 +77,17 @@ class CNAPTrainer():
                                        num_workers=self.args.num_workers,
                                        pin_memory=True)
 
+        self.register_extra_parameters(self.benchmark.model)
+        self.benchmark.model.train()
+        self.benchmark.model.feature_extractor.eval()
+        self.benchmark.model.distribute_model()
         self.meta_optimizer = torch.optim.Adam(self.benchmark.model.parameters(),
                                                lr=self.args.meta_lr)
+
+    def register_extra_parameters(self, model):
+        for module in model.modules():
+            if isinstance(module, TaskNormI):
+                module.register_extra_weights()
 
     def _build_metalearner(self):
         self.metalearner = CNAPs(self.benchmark.model,
@@ -162,8 +172,6 @@ class CNAPTester():
     def _build_metalearner(self):
 
         self.metalearner = CNAPs(self.benchmark.model,
-                                 self.meta_optimizer,
-                                 first_order=self.config['first_order'],
                                  num_adaptation_steps=self.config['num_steps'],
                                  step_size=self.config['step_size'],
                                  loss_function=self.benchmark.loss_function,
@@ -179,7 +187,7 @@ class CNAPTester():
         with open(os.path.join(dirname, 'results.json'), 'w') as f:
             json.dump(results, f)
 
-        self.highest_test = results['accuracies_after']
+        self.highest_test = results['accuracies']
 
     def get_result(self):
         return tuple([self.highest_test])

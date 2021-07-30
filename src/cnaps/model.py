@@ -366,7 +366,7 @@ class Cnaps(nn.Module):
     def __init__(self,
                  pretrained_resnet_path='./src/cnaps/checkpoints/pretrained_resnet.pt.tar',
                  feature_adaptation='film',
-                 batch_normalization='basic'):
+                 batch_normalization='tasknorm-i'):
         super(Cnaps, self).__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available else 'cpu')
         networks = ConfigureNetworks(pretrained_resnet_path=pretrained_resnet_path,
@@ -382,7 +382,7 @@ class Cnaps(nn.Module):
         self.feature_extractor = networks.get_feature_extractor()
         self.feature_adaptation_network = networks.get_feature_adaptation()
         self.task_representation = None
-        self.use_two_gpus = False
+        self.use_two_gpus = True
         # Dictionary mapping class label (integer) to encoded representation
         self.class_representations = OrderedDict()
 
@@ -423,6 +423,8 @@ class Cnaps(nn.Module):
         if self.use_two_gpus:
             context_images_1 = context_images.cuda(1)
             target_images_1 = target_images.cuda(1)
+            self.feature_adaptation_network.to(device='cuda:1')
+            self.feature_extractor.to(device='cuda:1')
             if self.feature_adaptation == 'film+ar':
                 task_representation_1 = self.task_representation.cuda(1)
                 # Get adaptation params by passing context set through the adaptation networks

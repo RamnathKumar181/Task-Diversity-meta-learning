@@ -60,7 +60,7 @@ class CNAPs(object):
         self.num_ways = num_ways
         self.num_shots = num_shots
         self.num_shots_test = num_shots_test
-
+        self.model.to(device=self.device)
         if per_param_step_size:
             self.step_size = OrderedDict((name, torch.tensor(step_size,
                                                              dtype=param.dtype, device=self.device,
@@ -99,15 +99,18 @@ class CNAPs(object):
         mean_loss = torch.tensor(0., device=self.device)
         for task_id, (train_inputs, train_targets, test_inputs, test_targets) \
                 in enumerate(zip(*batch['train'], *batch['test'])):
-
+            train_inputs = train_inputs.to(device=self.device)
+            train_targets = train_targets.to(device=self.device)
+            test_inputs = test_inputs.to(device=self.device)
+            test_targets = test_targets.to(device=self.device)
             target_logits = self.model(train_inputs, train_targets, test_inputs)
-            loss = self.loss_function(target_logits, test_targets)
-            regularization_term = (self.model.feature_adaptation_network.regularization_term())
+            loss = self.loss_function(target_logits, test_targets) / 16
+            regularization_term = (
+                self.model.feature_adaptation_network.regularization_term()).cuda(0)
             regularizer_scaling = 0.001
             loss += regularizer_scaling * regularization_term
             accuracy = aggregate_accuracy(target_logits, test_targets)
-            loss.backward()
-            self.optimizer.step()
+            loss.backward(retain_graph=False)
             results['loss'][task_id] = loss.item()
             mean_loss += loss
 
@@ -119,7 +122,7 @@ class CNAPs(object):
 
         return mean_loss, results
 
-    def train(self, dataloader, max_batches=500, verbose=True, **kwargs):
+    def train(self, dataloader, max_batches=250, verbose=True, **kwargs):
         with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
             for results in self.train_iter(dataloader, max_batches=max_batches):
                 pbar.update(1)
@@ -150,10 +153,11 @@ class CNAPs(object):
 
                 batch = tensors_to_device(batch, device=self.device)
                 loss, results = self.get_loss(batch)
+                self.optimizer.step()
                 yield results
                 num_batches += 1
 
-    def evaluate(self, dataloader, max_batches=500, verbose=True, **kwargs):
+    def evaluate(self, dataloader, max_batches=200, verbose=True, **kwargs):
         mean_loss, mean_accuracy, count = 0., 0., 0
         with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
             for results in self.evaluate_iter(dataloader, max_batches=max_batches):
