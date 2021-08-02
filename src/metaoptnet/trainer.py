@@ -76,7 +76,8 @@ class MetaOptNetTrainer():
                                        num_workers=self.args.num_workers,
                                        pin_memory=True)
 
-        self.meta_optimizer = torch.optim.SGD(self.benchmark.model.parameters(),
+        self.meta_optimizer = torch.optim.SGD([{'params': self.benchmark.model.embedding_network.parameters()},
+                                               {'params': self.benchmark.model.cls_head.parameters()}],
                                               lr=self.args.meta_lr,
                                               momentum=self.args.momentum,
                                               weight_decay=self.args.weight_decay,
@@ -171,7 +172,6 @@ class MetaOptNetTester():
     def _build_metalearner(self):
 
         self.metalearner = MetaOptNet(self.benchmark.model,
-                                      first_order=self.config['first_order'],
                                       num_adaptation_steps=self.config['num_steps'],
                                       step_size=self.config['step_size'],
                                       loss_function=self.benchmark.loss_function,

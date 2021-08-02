@@ -76,24 +76,34 @@ class ReptileTrainer():
                                        num_workers=self.args.num_workers,
                                        pin_memory=True)
 
-        self.meta_optimizer = torch.optim.Adam(self.benchmark.model.parameters(),
-                                               lr=self.args.meta_lr)
+        self.optimizer = torch.optim.Adam(self.benchmark.model.parameters(),
+                                          lr=self.args.lr, betas=(0, 0.999))
+        self.meta_optimizer = torch.optim.SGD(self.benchmark.model.parameters(),
+                                              lr=self.args.meta_lr)
 
     def _build_metalearner(self):
 
         self.metalearner = Reptile(self.benchmark.model,
-                                   self.meta_optimizer,
-                                   first_order=self.args.first_order,
+                                   self.optimizer,
                                    num_adaptation_steps=self.args.num_steps,
                                    step_size=self.args.step_size,
+                                   outer_step_size=self.args.lr,
                                    loss_function=self.benchmark.loss_function,
+                                   lr=self.args.lr,
                                    device=self.device)
+
+    def set_learning_rate(self, optimizer, lr):
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = lr
 
     def _train(self):
         best_value = None
         for epoch in range(self.args.num_epochs):
+            meta_lr = self.args.meta_lr * (1. - epoch/float(self.args.num_epochs))
+            self.set_learning_rate(self.meta_optimizer, meta_lr)
             self.metalearner.train(self.meta_train_dataloader,
                                    max_batches=self.args.num_batches,
+                                   meta_opt=self.meta_optimizer,
                                    verbose=self.args.verbose,
                                    desc='Training',
                                    leave=False)

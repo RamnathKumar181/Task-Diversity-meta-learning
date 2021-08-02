@@ -71,6 +71,8 @@ def get_benchmark_by_name(model_name,
                           metaoptnet_head='SVM-CS'):
     """Get dataset, model and loss function"""
     from src.maml.model import ModelConvOmniglot, ModelConvMiniImagenet, ModelMLPSinusoid
+    from src.reptile.model import ModelConvOmniglot as ModelConvOmniglotReptile
+    from src.reptile.model import ModelConvMiniImagenet as ModelConvMiniImagenetReptile
     from src.protonet.model import Protonet_Omniglot, Protonet_MiniImagenet
     from src.protonet.metalearners.loss import prototypical_loss
     from src.matching_networks.model import MatchingNetwork
@@ -142,8 +144,11 @@ def get_benchmark_by_name(model_name,
                                      meta_test=True,
                                      dataset_transform=dataset_transform)
 
-        if model_name in ['maml', 'reptile']:
+        if model_name == 'maml':
             model = ModelConvOmniglot(num_ways, hidden_size=hidden_size)
+            loss_function = F.cross_entropy
+        elif model_name == 'reptile':
+            model = ModelConvOmniglotReptile(num_ways, hidden_size=hidden_size)
             loss_function = F.cross_entropy
         elif model_name == 'protonet':
             model = Protonet_Omniglot()
@@ -151,14 +156,14 @@ def get_benchmark_by_name(model_name,
         elif model_name == 'matching_networks':
             model = MatchingNetwork(keep_prob=0, batch_size=32, num_channels=1, fce=False, num_classes_per_set=num_ways,
                                     num_samples_per_class=num_shots, image_size=28)
-            loss_function = torch.nn.NLLLoss()
+            loss_function = torch.nn.NLLLoss
         elif model_name == 'cnaps':
             model = Cnaps()
             loss_function = CNAPsLoss
         elif model_name == 'metaoptnet':
             model = MetaOptNet(name, metaoptnet_embedding, metaoptnet_head,
                                num_ways, num_shots, num_shots_test)
-            loss_function = torch.nn.NLLLoss()
+            loss_function = torch.nn.NLLLoss
 
     elif name == 'miniimagenet':
         transform = Compose([Resize(84), ToTensor()])
@@ -191,8 +196,11 @@ def get_benchmark_by_name(model_name,
                                          meta_test=True,
                                          dataset_transform=dataset_transform)
 
-        if model_name in ['maml', 'reptile']:
+        if model_name == 'maml':
             model = ModelConvMiniImagenet(num_ways, hidden_size=hidden_size)
+            loss_function = F.cross_entropy
+        elif model_name == 'reptile':
+            model = ModelConvMiniImagenetReptile(num_ways, hidden_size=hidden_size)
             loss_function = F.cross_entropy
         elif model_name == 'protonet':
             model = Protonet_MiniImagenet()
@@ -200,14 +208,14 @@ def get_benchmark_by_name(model_name,
         elif model_name == 'matching_networks':
             model = MatchingNetwork(keep_prob=0, batch_size=32, num_channels=3, fce=False, num_classes_per_set=num_ways,
                                     num_samples_per_class=num_shots, image_size=84)
-            loss_function = F.cross_entropy
+            loss_function = torch.nn.NLLLoss
         elif model_name == 'cnaps':
             model = Cnaps()
             loss_function = CNAPsLoss
         elif model_name == 'metaoptnet':
             model = MetaOptNet(name, metaoptnet_embedding, metaoptnet_head,
                                num_ways, num_shots, num_shots_test)
-            loss_function = torch.nn.CrossEntropyLoss()
+            loss_function = torch.nn.NLLLoss
 
     else:
         raise NotImplementedError('Unknown dataset `{0}`.'.format(name))

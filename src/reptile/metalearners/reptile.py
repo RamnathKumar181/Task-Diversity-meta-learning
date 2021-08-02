@@ -1,10 +1,7 @@
 import torch
-import torch.nn.functional as F
 import numpy as np
 from tqdm import tqdm
-from copy import deepcopy
 from collections import OrderedDict
-from torchmeta.utils import gradient_update_parameters
 from src.utils import compute_accuracy, tensors_to_device
 
 
@@ -45,18 +42,21 @@ class Reptile(object):
            arXiv preprint arXiv:1803.02999 (2018).
     """
 
-    def __init__(self, model, optimizer=None, step_size=0.1, first_order=False,
+    def __init__(self, model, optimizer=None, step_size=0.1, outer_step_size=0.001, first_order=False,
                  learn_step_size=False, per_param_step_size=False,
                  num_adaptation_steps=1, scheduler=None,
-                 loss_function=F.cross_entropy, device=None):
+                 loss_function=torch.nn.NLLLoss, device=None, lr=0.001):
         self.model = model.to(device=device)
         self.optimizer = optimizer
         self.step_size = step_size
+        self.lr = lr
         self.first_order = first_order
         self.num_adaptation_steps = num_adaptation_steps
         self.scheduler = scheduler
         self.loss_function = loss_function
         self.device = device
+        self.state = None
+        self.outer_step_size = outer_step_size
         self.model.to(device=self.device)
         if per_param_step_size:
             self.step_size = OrderedDict((name, torch.tensor(step_size,
@@ -96,55 +96,42 @@ class Reptile(object):
                 'accuracies_after': np.zeros((num_tasks,), dtype=np.float32)
             })
 
-        weights_before = deepcopy(self.model.state_dict())
-        weights_after = {name: weights_before[name].zero_() for name in weights_before}
-        mean_weight_diff = {name: weights_before[name].zero_() for name in weights_before}
         for task_id, (train_inputs, train_targets, test_inputs, test_targets) \
                 in enumerate(zip(*batch['train'], *batch['test'])):
+            self.net = self.model.clone()
+            self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.lr, betas=(0, 0.999))
+            if self.state is not None:
+                self.optimizer.load_state_dict(self.state)
 
             train_inputs = train_inputs.to(device=self.device)
             train_targets = train_targets.to(device=self.device)
-            params, adaptation_results = self.adapt(train_inputs, train_targets,
-                                                    is_classification_task=is_classification_task,
-                                                    num_adaptation_steps=self.num_adaptation_steps,
-                                                    step_size=self.step_size, first_order=self.first_order)
-            for name in params:
-                weights_after[name] = params[name]
-
+            adaptation_results = self.adapt(train_inputs, train_targets,
+                                            is_classification_task=is_classification_task,
+                                            num_adaptation_steps=self.num_adaptation_steps,
+                                            step_size=self.step_size)
             results['inner_losses'][:, task_id] = adaptation_results['inner_losses']
             if is_classification_task:
                 results['accuracies_before'][task_id] = adaptation_results['accuracy_before']
-
-            weight_diff = {name: (weights_after[name] -
-                           weights_before[name]) for name in weights_before}
-            mean_weight_diff = {
-                name: mean_weight_diff[name]+weight_diff[name] for name in weights_before}
             with torch.set_grad_enabled(self.model.training):
                 test_inputs = test_inputs.to(device=self.device)
-                test_logits = self.model(test_inputs, params=params)
+                test_logits = self.model(test_inputs)
 
             if is_classification_task:
                 results['accuracies_after'][task_id] = compute_accuracy(
                     test_logits, test_targets)
-            self.model.load_state_dict({name: (weights_before[name]) for name in weights_before})
-
-        mean_weight_diff = {name: mean_weight_diff[name].div_(
-            num_tasks) for name in mean_weight_diff}
-        results['mean_outer_loss'] = mean_weight_diff
-
-        return mean_weight_diff, results
+        results['mean_outer_loss'] = 0
+        return 0, results
 
     def adapt(self, inputs, targets, is_classification_task=None,
-              num_adaptation_steps=1, step_size=0.1, first_order=False):
+              num_adaptation_steps=1, step_size=0.1):
         if is_classification_task is None:
             is_classification_task = (not targets.dtype.is_floating_point)
-        params = None
 
         results = {'inner_losses': np.zeros(
             (num_adaptation_steps,), dtype=np.float32)}
 
         for step in range(num_adaptation_steps):
-            logits = self.model(inputs, params=params)
+            logits = self.model(inputs)
             inner_loss = self.loss_function(logits, targets)
             results['inner_losses'][step] = inner_loss.item()
 
@@ -152,15 +139,13 @@ class Reptile(object):
                 results['accuracy_before'] = compute_accuracy(logits, targets)
 
             self.model.zero_grad()
-            params = gradient_update_parameters(self.model, inner_loss,
-                                                step_size=step_size, params=params,
-                                                first_order=(not self.model.training) or first_order)
+            inner_loss.backward()
+            self.optimizer.step()
+        return results
 
-        return params, results
-
-    def train(self, dataloader, max_batches=500, verbose=True, **kwargs):
+    def train(self, dataloader, max_batches=500, meta_opt=None, verbose=True, **kwargs):
         with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
-            for results in self.train_iter(dataloader, max_batches=max_batches):
+            for results in self.train_iter(dataloader, max_batches=max_batches, meta_opt=meta_opt):
                 pbar.update(1)
                 postfix = {'loss': 'NaN'}
                 if 'accuracies_after' in results:
@@ -168,7 +153,7 @@ class Reptile(object):
                         np.mean(results['accuracies_after']))
                 pbar.set_postfix(**postfix)
 
-    def train_iter(self, dataloader, max_batches=500):
+    def train_iter(self, dataloader, max_batches=500, meta_opt=None):
         if self.optimizer is None:
             raise RuntimeError('Trying to call `train_iter`, while the '
                                'optimizer is `None`. In order to train `{0}`, you must '
@@ -181,18 +166,16 @@ class Reptile(object):
             for batch in dataloader:
                 if num_batches >= max_batches:
                     break
-
-                if self.scheduler is not None:
-                    self.scheduler.step(epoch=num_batches)
-
                 self.optimizer.zero_grad()
 
                 batch = tensors_to_device(batch, device=self.device)
-                weights_before = deepcopy(self.model.state_dict())
                 outer_loss, results = self.get_outer_loss(batch)
+                self.state = self.optimizer.state_dict()
+                self.model.point_grad_to(self.net)
+                meta_opt.step()
+                if self.scheduler is not None:
+                    self.scheduler.step(epoch=num_batches)
                 yield results
-                self.model.load_state_dict(
-                    {name: weights_before[name] + self.step_size*outer_loss[name] for name in weights_before})
                 num_batches += 1
 
     def evaluate(self, dataloader, max_batches=500, verbose=True, **kwargs):

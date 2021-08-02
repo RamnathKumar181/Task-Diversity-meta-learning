@@ -1,4 +1,6 @@
 import torch.nn as nn
+import torch
+from torch.autograd import Variable
 
 from collections import OrderedDict
 from torchmeta.modules import (MetaModule, MetaConv2d,
@@ -15,7 +17,30 @@ def conv_block(in_channels, out_channels, **kwargs):
     ]))
 
 
-class MetaConvModel(MetaModule):
+class ReptileModel(nn.Module):
+
+    def __init__(self):
+        nn.Module.__init__(self)
+
+    def point_grad_to(self, target):
+        '''
+        Set .grad attribute of each parameter to be proportional
+        to the difference between self and target
+        '''
+        for p, target_p in zip(self.parameters(), target.parameters()):
+            if p.grad is None:
+                if self.is_cuda():
+                    p.grad = Variable(torch.zeros(p.size())).cuda()
+                else:
+                    p.grad = Variable(torch.zeros(p.size()))
+            p.grad.data.zero_()  # not sure this is required
+            p.grad.data.add_(p.data - target_p.data)
+
+    def is_cuda(self):
+        return next(self.parameters()).is_cuda
+
+
+class MetaConvModel(ReptileModel):
     """4-layer Convolutional Neural Network architecture from [1].
     Parameters
     ----------
@@ -55,13 +80,19 @@ class MetaConvModel(MetaModule):
         ]))
         self.classifier = MetaLinear(feature_size, out_features, bias=True)
 
-    def forward(self, inputs, params=None):
-        features = self.features(inputs, params=self.get_subdict(params,
-                                                                 'features'))
+    def forward(self, inputs):
+        features = self.features(inputs)
         features = features.view((features.size(0), -1))
-        logits = self.classifier(features,
-                                 params=self.get_subdict(params, 'classifier'))
+        logits = self.classifier(features)
         return logits
+
+    def clone(self):
+        clone = MetaConvModel(self.in_channels, self.out_features,
+                              self.hidden_size, self.feature_size)
+        clone.load_state_dict(self.state_dict())
+        if self.is_cuda():
+            clone.cuda()
+        return clone
 
 
 class MetaMLPModel(MetaModule):

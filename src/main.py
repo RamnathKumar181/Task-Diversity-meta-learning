@@ -79,6 +79,10 @@ def parse_args():
                         help='Learning rate for the meta-optimizer '
                         '(optimization of the outer loss). The default '
                         'optimizer is Adam (default: 1e-3).')
+    parser.add_argument('--lr', type=float, default=0.001,
+                        help='Learning rate for the optimizer '
+                        '(optimization of the outer loss). The default '
+                        'optimizer is Adam (default: 1e-3).')
     parser.add_argument('--lr_scheduler_step', type=int, default=20,
                         help='StepLR learning rate scheduler step, (default=20).')
     parser.add_argument('--lr_scheduler_gamma', type=float, default=0.5,
