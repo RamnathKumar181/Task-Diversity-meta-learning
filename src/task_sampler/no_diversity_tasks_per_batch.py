@@ -29,13 +29,10 @@ class CombinationRandomSampler(RandomSampler):
     def __iter__(self):
         num_classes_per_task = self.data_source.num_classes_per_task
         num_classes = len(self.data_source.dataset)
-        x = []
-        for i in range(self.batch_size):
-            x.append(random.sample(range(num_classes), num_classes_per_task))
         for _ in combinations(range(num_classes), num_classes_per_task):
-            random.shuffle(x)
-            for j in range(self.batch_size):
-                y = tuple(random.sample(x[j], num_classes_per_task))
+            x = random.sample(range(num_classes), num_classes_per_task)
+            for _ in range(self.batch_size):
+                y = tuple(random.sample(x, num_classes_per_task))
                 yield y
 
 
@@ -81,13 +78,13 @@ class MetaDataLoader(DataLoader):
                                              worker_init_fn=worker_init_fn)
 
 
-class BatchMetaDataLoaderNDB(MetaDataLoader):
+class BatchMetaDataLoaderNDTB(MetaDataLoader):
     def __init__(self, dataset, batch_size=1, shuffle=True, sampler=None, num_workers=0,
                  pin_memory=False, drop_last=False, timeout=0, worker_init_fn=None, batch_sampler=None):
         collate_fn = BatchMetaCollate(default_collate)
 
-        super(BatchMetaDataLoaderNDB, self).__init__(dataset,
-                                                     batch_size=batch_size, shuffle=shuffle, sampler=sampler,
-                                                     batch_sampler=batch_sampler, num_workers=num_workers,
-                                                     collate_fn=collate_fn, pin_memory=pin_memory, drop_last=drop_last,
-                                                     timeout=timeout, worker_init_fn=worker_init_fn)
+        super(BatchMetaDataLoaderNDTB, self).__init__(dataset,
+                                                      batch_size=batch_size, shuffle=shuffle, sampler=sampler,
+                                                      batch_sampler=batch_sampler, num_workers=num_workers,
+                                                      collate_fn=collate_fn, pin_memory=pin_memory, drop_last=drop_last,
+                                                      timeout=timeout, worker_init_fn=worker_init_fn)

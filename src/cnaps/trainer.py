@@ -65,7 +65,13 @@ class CNAPTrainer():
                                                  shuffle=True,
                                                  num_workers=self.args.num_workers,
                                                  pin_memory=True)
-        else:
+        elif self.args.task_sampler == 'no_diversity_tasks_per_batch':
+            from src.task_sampler import BatchMetaDataLoaderNDTB as BMD_NDTB
+            self.meta_train_dataloader = BMD_NDTB(self.benchmark.meta_train_dataset,
+                                                  batch_size=self.args.batch_size,
+                                                  shuffle=True,
+                                                  num_workers=self.args.num_workers,
+                                                  pin_memory=True)
             self.meta_train_dataloader = BMD(self.benchmark.meta_train_dataset,
                                              batch_size=self.args.batch_size,
                                              shuffle=True,
