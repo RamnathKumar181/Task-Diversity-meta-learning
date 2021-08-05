@@ -2,7 +2,7 @@
 #SBATCH --job-name=maml_omniglot_single_batch
 #SBATCH --output=../logs/maml_omniglot_single_batch.out
 #SBATCH --error=../logs/maml_omniglot_single_batch.err
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=20G
 
