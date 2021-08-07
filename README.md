@@ -21,6 +21,7 @@ pip install -r requirements.txt
  - qpth 0.0.15
  - cvxpy 1.1.13
  - numpy 1.21.0
+ - wandb 0.11.2
 
 ### Performances
 
