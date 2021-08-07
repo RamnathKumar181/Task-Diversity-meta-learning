@@ -1,6 +1,7 @@
 import argparse
 from src.logger import Logger
 import gc
+import torch
 import json
 from glob import glob
 from src.utils import seed_everything
@@ -10,6 +11,7 @@ from src.reptile import ReptileTrainer, ReptileTester
 from src.matching_networks import MatchingNetworksTrainer, MatchingNetworksTester
 from src.cnaps import CNAPTrainer, CNAPTester
 from src.metaoptnet import MetaOptNetTrainer, MetaOptNetTester
+import wandb
 
 
 def parse_args():
@@ -106,6 +108,9 @@ def parse_args():
     parser.add_argument('--log-interval', type=int, default=1,
                         help='Log interval of the model '
                         '(default: 1 epoch).')
+    parser.add_argument('--exp_name', type=str, default=None,
+                        help='Experiment name'
+                        '(default: None).')
 
     args = parser.parse_args()
 
@@ -116,7 +121,11 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
+    torch.cuda.empty_cache()
+
     if args.train:
+        wandb.init(project='Task_Diversity', config=args, name=args.exp_name,
+                   settings=wandb.Settings(start_method='thread'), reinit=False)
         log = Logger(args.runs)
         log.reset(args.runs, info="Validation Accuracy")
 
@@ -177,56 +186,61 @@ if __name__ == '__main__':
 
         print(f"Average Performance of {args.model} on {args.dataset}:")
         log.print_statistics()
-    else:
-        log = Logger(len(glob(f'{args.output_folder}/*/config.json')))
-        log.reset(len(glob(f'{args.output_folder}/*/config.json')), info="Testing Accuracy")
-        for run, config_file in enumerate(glob(f'{args.output_folder}/*/config.json')):
-            with open(config_file, 'r') as f:
-                config = json.load(f)
-            if args.folder is not None:
-                config['folder'] = args.folder
-            if args.num_steps > 0:
-                config['num_steps'] = args.num_steps
-            if args.num_batches > 0:
-                config['num_batches'] = args.num_batches
-            config['verbose'] = args.verbose
 
-            if config['model'] == 'maml':
-                """
-                MAML Test
-                """
-                maml_tester = MAMLTester(config)
-                log.add_result(run, maml_tester.get_result())
-            elif config['model'] == 'protonet':
-                """
-                Protonet Test
-                """
-                protonet_tester = ProtonetTester(config)
-                log.add_result(run, protonet_tester.get_result())
-            elif config['model'] == 'reptile':
-                """
-                Reptile Test
-                """
-                reptile_tester = ReptileTester(config)
-                log.add_result(run, reptile_tester.get_result())
-            elif config['model'] == 'matching_networks':
-                """
-                MatchingNetworks Test
-                """
-                mn_tester = MatchingNetworksTester(config)
-                log.add_result(run, mn_tester.get_result())
-            elif config['model'] == 'cnaps':
-                """
-                Conditional Neural Adaptive Processes Test
-                """
-                cnap_tester = CNAPTester(config)
-                log.add_result(run, cnap_tester.get_result())
-            elif config['model'] == 'metaoptnet':
-                """
-                MetaOptNet Test
-                """
-                mon_tester = MetaOptNetTester(config)
-                log.add_result(run, mon_tester.get_result())
+    log = Logger(len(glob(f'{args.output_folder}/*/config.json')))
+    log.reset(len(glob(f'{args.output_folder}/*/config.json')), info="Testing Accuracy")
+    for run, config_file in enumerate(glob(f'{args.output_folder}/*/config.json')):
+        with open(config_file, 'r') as f:
+            config = json.load(f)
+        if args.folder is not None:
+            config['folder'] = args.folder
+        if args.num_steps > 0:
+            config['num_steps'] = args.num_steps
+        if args.num_batches > 0:
+            config['num_batches'] = args.num_batches
+        if args.exp_name is not None:
+            config['exp_name'] = args.exp_name
+        config['verbose'] = args.verbose
+        wandb.init(project='Task_Diversity', config=config, name=config['exp_name'],
+                   settings=wandb.Settings(start_method='thread'), reinit=False)
+        wandb.config = config
+        if config['model'] == 'maml':
+            """
+            MAML Test
+            """
+            maml_tester = MAMLTester(config)
+            log.add_result(run, maml_tester.get_result())
+        elif config['model'] == 'protonet':
+            """
+            Protonet Test
+            """
+            protonet_tester = ProtonetTester(config)
+            log.add_result(run, protonet_tester.get_result())
+        elif config['model'] == 'reptile':
+            """
+            Reptile Test
+            """
+            reptile_tester = ReptileTester(config)
+            log.add_result(run, reptile_tester.get_result())
+        elif config['model'] == 'matching_networks':
+            """
+            MatchingNetworks Test
+            """
+            mn_tester = MatchingNetworksTester(config)
+            log.add_result(run, mn_tester.get_result())
+        elif config['model'] == 'cnaps':
+            """
+            Conditional Neural Adaptive Processes Test
+            """
+            cnap_tester = CNAPTester(config)
+            log.add_result(run, cnap_tester.get_result())
+        elif config['model'] == 'metaoptnet':
+            """
+            MetaOptNet Test
+            """
+            mon_tester = MetaOptNetTester(config)
+            log.add_result(run, mon_tester.get_result())
 
-        print(f"Average Performance of {config['model']} on {args.dataset}:")
-        log.print_statistics()
+    print(f"Average Performance of {config['model']} on {args.dataset}:")
+    log.print_statistics()
+    wandb.finish()

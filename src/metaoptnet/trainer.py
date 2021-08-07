@@ -6,6 +6,7 @@ import torch
 from src.metaoptnet.metalearners import MetaOptNet
 from src.utils import get_benchmark_by_name
 from torchmeta.utils.data import BatchMetaDataLoader as BMD
+import wandb
 
 
 class MetaOptNetTrainer():
@@ -14,6 +15,7 @@ class MetaOptNetTrainer():
         self.highest_val = 0
         self.device = self._device()
         logging.basicConfig(level=logging.DEBUG if self.args.verbose else logging.INFO)
+        logging.info(f"Configuration while training: {args}")
         self._build()
 
     def _build(self):
@@ -21,6 +23,7 @@ class MetaOptNetTrainer():
         self._build_loaders_and_optim()
         self._build_metalearner()
         self._train()
+        wandb.save(f"{self.args.model_path}")
 
     def _create_config_file(self):
         if (self.args.output_folder is not None):
@@ -51,6 +54,7 @@ class MetaOptNetTrainer():
                                                self.args.num_shots_test,
                                                hidden_size=self.args.hidden_size)
         if self.args.task_sampler == 'no_diversity_task':
+            logging.info("Using no_diversity_task sampler:\n\n")
             from src.task_sampler import BatchMetaDataLoaderNDT as BMD_NDT
             self.meta_train_dataloader = BMD_NDT(self.benchmark.meta_train_dataset,
                                                  batch_size=self.args.batch_size,
@@ -58,6 +62,7 @@ class MetaOptNetTrainer():
                                                  num_workers=self.args.num_workers,
                                                  pin_memory=True)
         elif self.args.task_sampler == 'no_diversity_batch':
+            logging.info("Using no_diversity_batch sampler:\n\n")
             from src.task_sampler import BatchMetaDataLoaderNDB as BMD_NDB
             self.meta_train_dataloader = BMD_NDB(self.benchmark.meta_train_dataset,
                                                  batch_size=self.args.batch_size,
@@ -65,6 +70,7 @@ class MetaOptNetTrainer():
                                                  num_workers=self.args.num_workers,
                                                  pin_memory=True)
         elif self.args.task_sampler == 'no_diversity_tasks_per_batch':
+            logging.info("Using no_diversity_tasks_per_batch sampler:\n\n")
             from src.task_sampler import BatchMetaDataLoaderNDTB as BMD_NDTB
             self.meta_train_dataloader = BMD_NDTB(self.benchmark.meta_train_dataset,
                                                   batch_size=self.args.batch_size,
@@ -72,6 +78,7 @@ class MetaOptNetTrainer():
                                                   num_workers=self.args.num_workers,
                                                   pin_memory=True)
         else:
+            logging.info("Using uniform_task sampler:\n\n")
             self.meta_train_dataloader = BMD(self.benchmark.meta_train_dataset,
                                              batch_size=self.args.batch_size,
                                              shuffle=True,
@@ -94,6 +101,7 @@ class MetaOptNetTrainer():
             0.06 if e < 40 else 0.012 if e < 50 else (0.0024))
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(
             self.meta_optimizer, lr_lambda=lambda_epoch, last_epoch=-1)
+        wandb.watch(self.benchmark.model)
 
     def _build_metalearner(self):
         self.metalearner = MetaOptNet(self.benchmark.model,
@@ -120,7 +128,7 @@ class MetaOptNetTrainer():
                                                 verbose=self.args.verbose,
                                                 desc='Validation')
             if (epoch+1) % self.args.log_interval == 0:
-                logging.info(f"Epoch {epoch+1}: {results['accuracies']}")
+                wandb.log({"Accuracy": results['accuracies']})
             # Save best model
             if ((best_value is None)
                     or (best_value < results['accuracies'])):
@@ -151,6 +159,8 @@ class MetaOptNetTester():
         self.config = config
         self.highest_test = 0
         self.device = self._device()
+        logging.basicConfig(level=logging.DEBUG if self.config['verbose'] else logging.INFO)
+        logging.info(f"Configuration while testing: {config}")
         self._build()
 
     def _build(self):
