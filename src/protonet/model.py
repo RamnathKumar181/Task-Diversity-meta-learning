@@ -49,7 +49,7 @@ def Protonet_Omniglot(out_features=64, hidden_size=64):
     return Protonet(1, hid_dim=hidden_size, z_dim=out_features)
 
 
-def Protonet_MiniImagenet(out_features=1600, hidden_size=64):
+def Protonet_MiniImagenet(out_features=64, hidden_size=64):
     """
     Protonet Model for MiniImagenet
     """

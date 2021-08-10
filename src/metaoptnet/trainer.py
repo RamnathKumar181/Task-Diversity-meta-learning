@@ -128,11 +128,11 @@ class MetaOptNetTrainer():
                                                 verbose=self.args.verbose,
                                                 desc='Validation')
             if (epoch+1) % self.args.log_interval == 0:
-                wandb.log({"Accuracy": results['accuracies']})
+                wandb.log({"Accuracy": results['accuracies']/100})
             # Save best model
             if ((best_value is None)
                     or (best_value < results['accuracies'])):
-                best_value = results['accuracies']
+                best_value = results['accuracies']/100
                 save_model = True
             else:
                 save_model = False
@@ -204,7 +204,7 @@ class MetaOptNetTester():
         with open(os.path.join(dirname, 'results.json'), 'w') as f:
             json.dump(results, f)
 
-        self.highest_test = results['accuracies']
+        self.highest_test = results['accuracies']/100
 
     def get_result(self):
         return tuple([self.highest_test])

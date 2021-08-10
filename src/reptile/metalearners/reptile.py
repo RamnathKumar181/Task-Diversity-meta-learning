@@ -96,9 +96,9 @@ class Reptile(object):
                 'accuracies_after': np.zeros((num_tasks,), dtype=np.float32)
             })
 
+        self.net = self.model.clone()
         for task_id, (train_inputs, train_targets, test_inputs, test_targets) \
                 in enumerate(zip(*batch['train'], *batch['test'])):
-            self.net = self.model.clone()
             self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.lr, betas=(0, 0.999))
             if self.state is not None:
                 self.optimizer.load_state_dict(self.state)

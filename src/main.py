@@ -201,6 +201,7 @@ if __name__ == '__main__':
         if args.exp_name is not None:
             config['exp_name'] = args.exp_name
         config['verbose'] = args.verbose
+        config['train'] = args.train
         wandb.init(project='Task_Diversity', config=config, name=config['exp_name'],
                    settings=wandb.Settings(start_method='thread'), reinit=False)
         wandb.config = config
