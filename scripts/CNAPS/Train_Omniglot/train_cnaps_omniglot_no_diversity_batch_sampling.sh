@@ -2,7 +2,7 @@
 #SBATCH --job-name=cnaps_omniglot_no_diversity_batch_sampling
 #SBATCH --output=../logs/cnaps_omniglot_no_diversity_batch_sampling.out
 #SBATCH --error=../logs/cnaps_omniglot_no_diversity_batch_sampling.err
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:2
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=20G
 
