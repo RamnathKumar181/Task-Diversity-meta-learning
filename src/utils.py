@@ -9,6 +9,8 @@ from torchmeta.datasets import Omniglot, MiniImagenet
 from torchmeta.toy import Sinusoid
 from torchmeta.transforms import ClassSplitter, Categorical, Rotation
 from torchvision.transforms import ToTensor, Resize, Compose
+from torchvision import transforms
+
 
 Benchmark = namedtuple('Benchmark', 'meta_train_dataset meta_val_dataset '
                        'meta_test_dataset model loss_function')
@@ -67,8 +69,11 @@ def get_benchmark_by_name(model_name,
                           num_shots,
                           num_shots_test,
                           hidden_size=None,
+                          test_dataset=None,
                           metaoptnet_embedding='ResNet',
-                          metaoptnet_head='SVM-CS'):
+                          metaoptnet_head='SVM-CS',
+                          use_random_crop=False,
+                          use_color_jitter=False):
     """Get dataset, model and loss function"""
     from src.maml.model import ModelConvOmniglot, ModelConvMiniImagenet, ModelMLPSinusoid
     from src.reptile.model import ModelConvOmniglot as ModelConvOmniglotReptile
@@ -82,6 +87,9 @@ def get_benchmark_by_name(model_name,
     dataset_transform = ClassSplitter(shuffle=True,
                                       num_train_per_class=num_shots,
                                       num_test_per_class=num_shots_test)
+    if test_dataset is not None:
+        folder = test_dataset
+
     if name == 'sinusoid':
         transform = ToTensor1D()
 
@@ -109,9 +117,19 @@ def get_benchmark_by_name(model_name,
 
     elif name == 'omniglot':
         class_augmentations = [Rotation([90, 180, 270])]
-        transform = Compose([Resize(28), ToTensor()])
+        transform = []
+        image_size = 28
         if model_name == 'cnaps':
-            transform = Compose([Resize(84), ToTensor()])
+            image_size = 84
+        if use_random_crop:
+            transform.append(transform.append(transforms.RandomResizedCrop(image_size)))
+        if use_color_jitter:
+            transform.append(transforms.ColorJitter(brightness=0.5,
+                                                    contrast=0.5,
+                                                    saturation=0.3))
+        transform.append(Resize(image_size))
+        transform.append(ToTensor())
+        transform = Compose(transform)
         try:
             meta_train_dataset = Omniglot(folder,
                                           transform=transform,
@@ -166,7 +184,16 @@ def get_benchmark_by_name(model_name,
             loss_function = torch.nn.NLLLoss
 
     elif name == 'miniimagenet':
-        transform = Compose([Resize(84), ToTensor()])
+        transform = []
+        if use_random_crop:
+            transform.append(transform.append(transforms.RandomResizedCrop(84)))
+        if use_color_jitter:
+            transform.append(transforms.ColorJitter(brightness=0.5,
+                                                    contrast=0.5,
+                                                    saturation=0.3))
+        transform.append(Resize(84))
+        transform.append(ToTensor())
+        transform = Compose(transform)
         try:
             meta_train_dataset = MiniImagenet(folder,
                                               transform=transform,

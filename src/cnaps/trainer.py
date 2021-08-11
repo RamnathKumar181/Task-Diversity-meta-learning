@@ -53,7 +53,9 @@ class CNAPTrainer():
                                                self.args.num_ways,
                                                self.args.num_shots,
                                                self.args.num_shots_test,
-                                               hidden_size=self.args.hidden_size)
+                                               hidden_size=self.args.hidden_size,
+                                               use_random_crop=self.args.use_random_crop,
+                                               use_color_jitter=self.args.use_color_jitter)
         if self.args.task_sampler == 'no_diversity_task':
             logging.info("Using no_diversity_task sampler:\n\n")
             from src.task_sampler import BatchMetaDataLoaderNDT as BMD_NDT
@@ -175,7 +177,10 @@ class CNAPTester():
                                                self.config['num_ways'],
                                                self.config['num_shots'],
                                                self.config['num_shots_test'],
-                                               hidden_size=self.config['hidden_size'])
+                                               hidden_size=self.config['hidden_size'],
+                                               test_dataset=self.config['dataset_test'],
+                                               use_random_crop=self.args.use_random_crop,
+                                               use_color_jitter=self.args.use_color_jitter)
 
         self.meta_test_dataloader = BMD(self.benchmark.meta_test_dataset,
                                         batch_size=self.config['batch_size'],

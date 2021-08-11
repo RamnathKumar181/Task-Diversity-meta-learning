@@ -202,6 +202,7 @@ if __name__ == '__main__':
             config['exp_name'] = args.exp_name
         config['verbose'] = args.verbose
         config['train'] = args.train
+        config['dataset_test'] = args.dataset
         wandb.init(project='Task_Diversity', config=config, name=config['exp_name'],
                    settings=wandb.Settings(start_method='thread'), reinit=False)
         wandb.config = config
