@@ -62,7 +62,7 @@ class PrototypicalNetwork(object):
         if 'test' not in batch:
             raise RuntimeError('The batch does not contain any test dataset.')
 
-        _, test_targets = batch['test']
+        _, test_targets, _ = batch['test']
         num_tasks = test_targets.size(0)
         is_classification_task = (not test_targets.dtype.is_floating_point)
         results = {
@@ -76,8 +76,8 @@ class PrototypicalNetwork(object):
             })
         self.model.zero_grad()
         mean_loss = torch.tensor(0., device=self.device)
-        train_inputs, train_targets = batch['train']
-        test_inputs, test_targets = batch['test']
+        train_inputs, train_targets, _ = batch['train']
+        test_inputs, test_targets, _ = batch['test']
         train_inputs = train_inputs.to(device=self.device)
         train_targets = train_targets.to(device=self.device)
         test_inputs = test_inputs.to(device=self.device)

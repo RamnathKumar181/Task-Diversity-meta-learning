@@ -121,7 +121,7 @@ def get_benchmark_by_name(model_name,
         if model_name == 'cnaps':
             image_size = 84
         if use_random_crop:
-            transform.append(transform.append(transforms.RandomResizedCrop(image_size)))
+            transform.append(transforms.RandomResizedCrop(image_size))
         if use_color_jitter:
             transform.append(transforms.ColorJitter(brightness=0.5,
                                                     contrast=0.5,
@@ -185,7 +185,7 @@ def get_benchmark_by_name(model_name,
     elif name == 'miniimagenet':
         transform = []
         if use_random_crop:
-            transform.append(transform.append(transforms.RandomResizedCrop(84)))
+            transform.append(transforms.RandomResizedCrop(84))
         if use_color_jitter:
             transform.append(transforms.ColorJitter(brightness=0.5,
                                                     contrast=0.5,
