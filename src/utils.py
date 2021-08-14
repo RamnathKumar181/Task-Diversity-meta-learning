@@ -5,12 +5,11 @@ import numpy as np
 import os
 
 from collections import namedtuple, OrderedDict
-from torchmeta.datasets import Omniglot, MiniImagenet
+from src.datasets import Omniglot, MiniImagenet
 from torchmeta.toy import Sinusoid
 from torchmeta.transforms import ClassSplitter, Categorical, Rotation
 from torchvision.transforms import ToTensor, Resize, Compose
 from torchvision import transforms
-
 
 Benchmark = namedtuple('Benchmark', 'meta_train_dataset meta_val_dataset '
                        'meta_test_dataset model loss_function')

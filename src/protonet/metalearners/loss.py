@@ -64,7 +64,7 @@ def get_accuracy(prototypes, embeddings, targets):
     sq_distances = torch.sum((prototypes.unsqueeze(1)
                               - embeddings.unsqueeze(2)) ** 2, dim=-1)
     _, predictions = torch.min(sq_distances, dim=-1)
-    return torch.mean(predictions.eq(targets).float())
+    return predictions.eq(targets).float()
 
 
 def prototypical_loss(prototypes, embeddings, targets, **kwargs):

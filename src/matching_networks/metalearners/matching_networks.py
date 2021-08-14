@@ -48,7 +48,7 @@ class MatchingNetwork(object):
                  learn_step_size=False, per_param_step_size=False,
                  num_adaptation_steps=1, scheduler=None,
                  loss_function=F.cross_entropy, device=None, num_ways=None,
-                 num_shots=None, num_shots_test=None):
+                 num_shots=None, num_shots_test=None, ohtm=False):
         self.model = model.to(device=device)
         self.optimizer = optimizer
         self.step_size = step_size
@@ -60,6 +60,9 @@ class MatchingNetwork(object):
         self.num_shots = num_shots
         self.num_shots_test = num_shots_test
         self.model.to(device=self.device)
+        self.ohtm = ohtm
+        if self.ohtm:
+            self.hardest_task = OrderedDict()
         if per_param_step_size:
             self.step_size = OrderedDict((name, torch.tensor(step_size,
                                                              dtype=param.dtype, device=self.device,
@@ -82,7 +85,7 @@ class MatchingNetwork(object):
         if 'test' not in batch:
             raise RuntimeError('The batch does not contain any test dataset.')
 
-        _, test_targets = batch['test']
+        _, test_targets, _ = batch['test']
         num_tasks = test_targets.size(0)
         is_classification_task = (not test_targets.dtype.is_floating_point)
         results = {
@@ -96,8 +99,8 @@ class MatchingNetwork(object):
             })
 
         mean_loss = torch.tensor(0., device=self.device)
-        train_inputs, train_targets = batch['train']
-        test_inputs, test_targets = batch['test']
+        train_inputs, train_targets, _ = batch['train']
+        test_inputs, test_targets, _ = batch['test']
         train_inputs = train_inputs.to(device=self.device)
         train_targets = train_targets.to(device=self.device)
         test_inputs = test_inputs.to(device=self.device)
@@ -109,7 +112,10 @@ class MatchingNetwork(object):
         mean_loss += loss
 
         if is_classification_task:
-            results['accuracies'] = accuracy.item()
+            results['accuracies'] = torch.mean(accuracy).item()
+        if self.ohtm:
+            for task_id, (_, _, task) in enumerate(*batch['train']):
+                self.hardest_task[task.cpu()] = accuracy[task_id]
 
         mean_loss.div_(num_tasks)
         results['mean_loss'] = mean_loss.item()

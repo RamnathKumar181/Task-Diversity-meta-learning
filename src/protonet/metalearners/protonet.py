@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from tqdm import tqdm
-
+from collections import OrderedDict
 from src.utils import tensors_to_device
 from src.protonet.metalearners.loss import prototypical_loss, get_prototypes
 
@@ -46,7 +46,7 @@ class PrototypicalNetwork(object):
     """
 
     def __init__(self, model, optimizer=None, scheduler=None,
-                 loss_function=prototypical_loss, device=None, num_ways=None):
+                 loss_function=prototypical_loss, device=None, num_ways=None, ohtm=False):
         self.model = model.to(device=device)
         self.optimizer = optimizer
         self.scheduler = scheduler
@@ -54,6 +54,9 @@ class PrototypicalNetwork(object):
         self.device = device
         self.num_ways = num_ways
         self.model.to(device=self.device)
+        self.ohtm = ohtm
+        if self.ohtm:
+            self.hardest_task = OrderedDict()
 
     def get_loss(self, batch):
         if 'test' not in batch:
@@ -87,7 +90,10 @@ class PrototypicalNetwork(object):
         loss.backward()
 
         if is_classification_task:
-            results['accuracies'] = accuracy.item()
+            results['accuracies'] = torch.mean(accuracy).item()
+        if self.ohtm:
+            for task_id, (_, _, task) in enumerate(*batch['train']):
+                self.hardest_task[task.cpu()] = accuracy[task_id]
 
         mean_loss.div_(num_tasks)
         results['mean_loss'] = loss.item()

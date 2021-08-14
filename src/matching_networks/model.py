@@ -184,7 +184,7 @@ class MatchingNetwork(nn.Module):
                                              test_embeddings,
                                              num_ways)
             test_predictions = torch.argmax(log_probas, dim=1)
-            accuracy = torch.mean((test_predictions == test_targets).float())
+            accuracy = (test_predictions == test_targets).float()
         # # produce embeddings for support set images
         # support_set_y_one_hot = F.one_hot(support_set_y)
         # support_images_encoded = self.g(support_set_images)

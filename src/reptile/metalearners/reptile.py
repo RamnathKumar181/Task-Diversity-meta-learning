@@ -45,7 +45,7 @@ class Reptile(object):
     def __init__(self, model, optimizer=None, step_size=0.1, outer_step_size=0.001, first_order=False,
                  learn_step_size=False, per_param_step_size=False,
                  num_adaptation_steps=1, scheduler=None,
-                 loss_function=torch.nn.NLLLoss, device=None, lr=0.001):
+                 loss_function=torch.nn.NLLLoss, device=None, lr=0.001, ohtm=False):
         self.model = model.to(device=device)
         self.optimizer = optimizer
         self.step_size = step_size
@@ -58,6 +58,9 @@ class Reptile(object):
         self.state = None
         self.outer_step_size = outer_step_size
         self.model.to(device=self.device)
+        self.ohtm = ohtm
+        if self.ohtm:
+            self.hardest_task = OrderedDict()
         if per_param_step_size:
             self.step_size = OrderedDict((name, torch.tensor(step_size,
                                                              dtype=param.dtype, device=self.device,
@@ -80,7 +83,7 @@ class Reptile(object):
         if 'test' not in batch:
             raise RuntimeError('The batch does not contain any test dataset.')
 
-        _, test_targets = batch['test']
+        _, test_targets, _ = batch['test']
         num_tasks = test_targets.size(0)
         is_classification_task = (not test_targets.dtype.is_floating_point)
         results = {
@@ -97,7 +100,7 @@ class Reptile(object):
             })
 
         self.net = self.model.clone()
-        for task_id, (train_inputs, train_targets, test_inputs, test_targets) \
+        for task_id, (train_inputs, train_targets, task, test_inputs, test_targets, _) \
                 in enumerate(zip(*batch['train'], *batch['test'])):
             self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.lr, betas=(0, 0.999))
             if self.state is not None:
@@ -119,6 +122,8 @@ class Reptile(object):
             if is_classification_task:
                 results['accuracies_after'][task_id] = compute_accuracy(
                     test_logits, test_targets)
+            if self.ohtm:
+                self.hardest_task[task.cpu()] = results['accuracies_after'][task_id]
         results['mean_outer_loss'] = 0
         return 0, results
 

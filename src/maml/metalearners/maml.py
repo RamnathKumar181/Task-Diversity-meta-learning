@@ -55,7 +55,7 @@ class ModelAgnosticMetaLearning(object):
     def __init__(self, model, optimizer=None, step_size=0.1, first_order=False,
                  learn_step_size=False, per_param_step_size=False,
                  num_adaptation_steps=1, scheduler=None,
-                 loss_function=F.cross_entropy, device=None):
+                 loss_function=F.cross_entropy, device=None, ohtm=False):
         self.model = model.to(device=device)
         self.optimizer = optimizer
         self.step_size = step_size
@@ -65,6 +65,9 @@ class ModelAgnosticMetaLearning(object):
         self.loss_function = loss_function
         self.device = device
         self.model.to(device=self.device)
+        self.ohtm = ohtm
+        if self.ohtm:
+            self.hardest_task = OrderedDict()
         if per_param_step_size:
             self.step_size = OrderedDict((name, torch.tensor(step_size,
                                                              dtype=param.dtype, device=self.device,
@@ -87,7 +90,7 @@ class ModelAgnosticMetaLearning(object):
         if 'test' not in batch:
             raise RuntimeError('The batch does not contain any test dataset.')
 
-        _, test_targets = batch['test']
+        _, test_targets, _ = batch['test']
         num_tasks = test_targets.size(0)
         is_classification_task = (not test_targets.dtype.is_floating_point)
         results = {
@@ -104,7 +107,7 @@ class ModelAgnosticMetaLearning(object):
             })
 
         mean_outer_loss = torch.tensor(0., device=self.device)
-        for task_id, (train_inputs, train_targets, test_inputs, test_targets) \
+        for task_id, (train_inputs, train_targets, task, test_inputs, test_targets, _) \
                 in enumerate(zip(*batch['train'], *batch['test'])):
 
             train_inputs = train_inputs.to(device=self.device)
@@ -129,6 +132,8 @@ class ModelAgnosticMetaLearning(object):
             if is_classification_task:
                 results['accuracies_after'][task_id] = compute_accuracy(
                     test_logits, test_targets)
+            if self.ohtm:
+                self.hardest_task[task.cpu()] = results['accuracies_after'][task_id]
 
         mean_outer_loss.div_(num_tasks)
         results['mean_outer_loss'] = mean_outer_loss.item()

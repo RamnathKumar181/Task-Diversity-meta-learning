@@ -57,7 +57,7 @@ class MatchingNetworksTrainer():
                                                use_color_jitter=self.args.use_color_jitter)
         if self.args.task_sampler == 'no_diversity_task':
             logging.info("Using no_diversity_task sampler:\n\n")
-            from src.task_sampler import BatchMetaDataLoaderNDT as BMD_NDT
+            from src.datasets.task_sampler import BatchMetaDataLoaderNDT as BMD_NDT
             self.meta_train_dataloader = BMD_NDT(self.benchmark.meta_train_dataset,
                                                  batch_size=self.args.batch_size,
                                                  shuffle=True,
@@ -65,7 +65,7 @@ class MatchingNetworksTrainer():
                                                  pin_memory=True)
         elif self.args.task_sampler == 'no_diversity_batch':
             logging.info("Using no_diversity_batch sampler:\n\n")
-            from src.task_sampler import BatchMetaDataLoaderNDB as BMD_NDB
+            from src.datasets.task_sampler import BatchMetaDataLoaderNDB as BMD_NDB
             self.meta_train_dataloader = BMD_NDB(self.benchmark.meta_train_dataset,
                                                  batch_size=self.args.batch_size,
                                                  shuffle=True,
@@ -73,12 +73,20 @@ class MatchingNetworksTrainer():
                                                  pin_memory=True)
         elif self.args.task_sampler == 'no_diversity_tasks_per_batch':
             logging.info("Using no_diversity_tasks_per_batch sampler:\n\n")
-            from src.task_sampler import BatchMetaDataLoaderNDTB as BMD_NDTB
+            from src.datasets.task_sampler import BatchMetaDataLoaderNDTB as BMD_NDTB
             self.meta_train_dataloader = BMD_NDTB(self.benchmark.meta_train_dataset,
                                                   batch_size=self.args.batch_size,
                                                   shuffle=True,
                                                   num_workers=self.args.num_workers,
                                                   pin_memory=True)
+        elif self.args.task_sampler == 'ohtm':
+            logging.info("Using online hardest task mining sampler:\n\n")
+            from src.datasets.task_sampler import OHTM
+            self.meta_train_dataloader = OHTM(self.benchmark.meta_train_dataset,
+                                              batch_size=self.args.batch_size,
+                                              shuffle=True,
+                                              num_workers=self.args.num_workers,
+                                              pin_memory=True)
         else:
             logging.info("Using uniform_task sampler:\n\n")
             self.meta_train_dataloader = BMD(self.benchmark.meta_train_dataset,
@@ -106,7 +114,10 @@ class MatchingNetworksTrainer():
                                            device=self.device,
                                            num_ways=self.args.num_ways,
                                            num_shots=self.args.num_shots,
-                                           num_shots_test=self.args.num_shots_test)
+                                           num_shots_test=self.args.num_shots_test,
+                                           ohtm=self.args.task_sampler == 'ohtm')
+        if self.args.task_sampler == 'ohtm':
+            self.meta_train_dataloader.init_metalearner(self.metalearner)
 
     def _train(self):
         best_value = None
@@ -170,8 +181,8 @@ class MatchingNetworksTester():
                                                self.config['num_shots_test'],
                                                hidden_size=self.config['hidden_size'],
                                                test_dataset=self.config['dataset_test'],
-                                               use_random_crop=self.args.use_random_crop,
-                                               use_color_jitter=self.args.use_color_jitter)
+                                               use_random_crop=self.config['use_random_crop'],
+                                               use_color_jitter=self.config['use_color_jitter'])
 
         self.meta_test_dataloader = BMD(self.benchmark.meta_test_dataset,
                                         batch_size=self.config['batch_size'],

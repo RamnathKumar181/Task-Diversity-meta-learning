@@ -29,7 +29,7 @@ def parse_args():
                         help='Name of the model to be used (default: MAML).')
     parser.add_argument('--task_sampler', type=str,
                         choices=['random', 'no_diversity_task',
-                                 'no_diversity_batch', 'no_diversity_tasks_per_batch'],
+                                 'no_diversity_batch', 'no_diversity_tasks_per_batch', 'ohtm'],
                         default='random',
                         help='Type of task sampler to be used '
                         '(default: random).')
@@ -104,6 +104,8 @@ def parse_args():
                         '(default: 1).')
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--use-cuda', action='store_true')
+    parser.add_argument('--use-random-crop', action='store_true')
+    parser.add_argument('--use-color-jitter', action='store_true')
     parser.add_argument('--train', action='store_true')
     parser.add_argument('--log-interval', type=int, default=1,
                         help='Log interval of the model '
