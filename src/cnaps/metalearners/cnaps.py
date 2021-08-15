@@ -82,7 +82,7 @@ class CNAPs(object):
                 self.scheduler.base_lrs([group['initial_lr']
                                          for group in self.optimizer.param_groups])
 
-    def get_loss(self, batch):
+    def get_loss(self, batch, train=False):
         if 'test' not in batch:
             raise RuntimeError('The batch does not contain any test dataset.')
 
@@ -119,7 +119,7 @@ class CNAPs(object):
 
             if is_classification_task:
                 results['accuracies'][task_id] = accuracy
-            if self.ohtm:
+            if self.ohtm and train:
                 self.hardest_task[task.cpu()] = results['accuracies'][task_id]
 
         mean_loss.div_(num_tasks)
@@ -157,7 +157,7 @@ class CNAPs(object):
                 self.optimizer.zero_grad()
 
                 batch = tensors_to_device(batch, device=self.device)
-                loss, results = self.get_loss(batch)
+                loss, results = self.get_loss(batch, train=True)
                 self.optimizer.step()
                 yield results
                 num_batches += 1
