@@ -34,7 +34,6 @@ class OHTMSampler(RandomSampler):
             if len(self.tasks):
                 x = self.tasks
                 for _ in range(int(self.batch_size/2)):
-                    print(f"Total tasks {x}")
                     y = random.sample(x, 1)
                     x = [item for item in x if item not in y]
                     yield tuple(y[0])

@@ -92,7 +92,7 @@ class PrototypicalNetwork(object):
         if is_classification_task:
             results['accuracies'] = torch.mean(accuracy).item()
         if self.ohtm and train:
-            for task_id, (_, _, task) in enumerate(*batch['train']):
+            for task_id, (_, _, task) in enumerate(zip(*batch['train'])):
                 self.hardest_task[task.cpu()] = accuracy[task_id]
 
         mean_loss.div_(num_tasks)

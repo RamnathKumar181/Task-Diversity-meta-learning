@@ -3,13 +3,18 @@ import torch.nn.functional as F
 import random
 import numpy as np
 import os
-
 from collections import namedtuple, OrderedDict
 from src.datasets import Omniglot, MiniImagenet
+from typing import Callable, cast, Tuple, Any
 from torchmeta.toy import Sinusoid
 from torchmeta.transforms import ClassSplitter, Categorical, Rotation
 from torchvision.transforms import ToTensor, Resize, Compose
 from torchvision import transforms
+from pathlib import Path
+
+from src.datasets.meta_dataset import config as config_lib
+from src.datasets.meta_dataset import pipeline as torch_pipeline
+from src.datasets.meta_dataset import dataset_spec as dataset_spec_lib
 
 Benchmark = namedtuple('Benchmark', 'meta_train_dataset meta_val_dataset '
                        'meta_test_dataset model loss_function')
@@ -59,6 +64,32 @@ class ToTensor1D(object):
 
     def __repr__(self):
         return self.__class__.__name__ + '()'
+
+
+def get_dataspecs(folder, num_ways, num_shots, num_shots_test,
+                  source='ilsvrc_2012') -> Tuple[Any, Any, Any]:
+    # Recovering data
+    data_config = config_lib.DataConfig(path=folder)
+    episod_config = config_lib.EpisodeDescriptionConfig(num_ways, num_shots, num_shots_test)
+
+    use_bilevel_ontology = False
+    use_dag_ontology = False
+
+    # Enable ontology aware sampling for Omniglot and ImageNet.
+    if source == 'omniglot':
+        # use_bilevel_ontology_list[sources.index('omniglot')] = True
+        use_bilevel_ontology = True
+    if source == 'ilsvrc_2012':
+        use_dag_ontology = True
+
+    episod_config.use_bilevel_ontology = use_bilevel_ontology
+    episod_config.use_dag_ontology = use_dag_ontology
+
+    dataset_records_path: Path = data_config.path / source
+    # Original codes handles paths as strings:
+    dataset_spec = dataset_spec_lib.load_dataset_spec(str(dataset_records_path))
+
+    return dataset_spec, data_config, episod_config
 
 
 def get_benchmark_by_name(model_name,
@@ -181,7 +212,6 @@ def get_benchmark_by_name(model_name,
             model = MetaOptNet(name, metaoptnet_embedding, metaoptnet_head,
                                num_ways, num_shots, num_shots_test)
             loss_function = torch.nn.NLLLoss
-
     elif name == 'miniimagenet':
         transform = []
         if use_random_crop:
@@ -222,6 +252,54 @@ def get_benchmark_by_name(model_name,
                                          meta_test=True,
                                          dataset_transform=dataset_transform)
 
+        if model_name == 'maml':
+            model = ModelConvMiniImagenet(num_ways, hidden_size=hidden_size)
+            loss_function = F.cross_entropy
+        elif model_name == 'reptile':
+            model = ModelConvMiniImagenetReptile(num_ways, hidden_size=hidden_size)
+            loss_function = F.cross_entropy
+        elif model_name == 'protonet':
+            model = Protonet_MiniImagenet()
+            loss_function = prototypical_loss
+        elif model_name == 'matching_networks':
+            model = MatchingNetwork(keep_prob=0, batch_size=32, num_channels=3, fce=False, num_classes_per_set=num_ways,
+                                    num_samples_per_class=num_shots, image_size=84)
+            loss_function = torch.nn.NLLLoss
+        elif model_name == 'cnaps':
+            model = Cnaps()
+            loss_function = CNAPsLoss
+        elif model_name == 'metaoptnet':
+            model = MetaOptNet(name, metaoptnet_embedding, metaoptnet_head,
+                               num_ways, num_shots, num_shots_test)
+            loss_function = torch.nn.NLLLoss
+    elif name == 'meta_dataset':
+        transform = []
+        if use_random_crop:
+            transform.append(transforms.RandomResizedCrop(84))
+        if use_color_jitter:
+            transform.append(transforms.ColorJitter(brightness=0.5,
+                                                    contrast=0.5,
+                                                    saturation=0.3))
+        transform.append(Resize(84))
+        transform.append(ToTensor())
+        transform = Compose(transform)
+        dataset_spec, data_config, episod_config = get_dataspecs(
+            folder, num_ways, num_shots, num_shots_test)
+        pipeline_fn = cast(Callable[..., torch.utils.data.Dataset],
+                           torch_pipeline.make_episode_pipeline)
+
+        meta_train_dataset: torch.utils.data.Dataset = pipeline_fn(dataset_spec=dataset_spec,
+                                                                   data_config=data_config,
+                                                                   split=0,
+                                                                   episode_descr_config=episod_config)
+        meta_val_dataset: torch.utils.data.Dataset = pipeline_fn(dataset_spec=dataset_spec,
+                                                                 data_config=data_config,
+                                                                 split=1,
+                                                                 episode_descr_config=episod_config)
+        meta_test_dataset: torch.utils.data.Dataset = pipeline_fn(dataset_spec=dataset_spec,
+                                                                  data_config=data_config,
+                                                                  split=2,
+                                                                  episode_descr_config=episod_config)
         if model_name == 'maml':
             model = ModelConvMiniImagenet(num_ways, hidden_size=hidden_size)
             loss_function = F.cross_entropy
