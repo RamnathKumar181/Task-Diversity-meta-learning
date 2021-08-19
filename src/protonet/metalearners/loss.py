@@ -39,7 +39,6 @@ def get_prototypes(embeddings, targets, num_classes):
     prototypes = embeddings.new_zeros((batch_size, num_classes, embedding_size))
     indices = targets.unsqueeze(-1).expand_as(embeddings)
     prototypes.scatter_add_(1, indices, embeddings).div_(num_samples)
-
     return prototypes
 
 

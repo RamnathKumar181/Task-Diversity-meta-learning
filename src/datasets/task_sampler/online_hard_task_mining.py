@@ -137,3 +137,4 @@ class OHTM(object):
                                              num_workers=self.num_workers,
                                              pin_memory=self.pin_memory, task=task_for_batch):
             return batch
+            break

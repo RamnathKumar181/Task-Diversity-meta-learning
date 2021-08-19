@@ -28,7 +28,7 @@ ImageNet's ontology in particular is described in the article.
 import json
 import os
 
-from absl import logging
+import logging
 from src.datasets.meta_dataset import imagenet_stats
 import numpy as np
 import six

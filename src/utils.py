@@ -5,13 +5,13 @@ import numpy as np
 import os
 from collections import namedtuple, OrderedDict
 from src.datasets import Omniglot, MiniImagenet
-from typing import Callable, cast, Tuple, Any
 from torchmeta.toy import Sinusoid
 from torchmeta.transforms import ClassSplitter, Categorical, Rotation
 from torchvision.transforms import ToTensor, Resize, Compose
 from torchvision import transforms
-from pathlib import Path
 
+from pathlib import Path
+from typing import Any, Tuple, cast, Callable
 from src.datasets.meta_dataset import config as config_lib
 from src.datasets.meta_dataset import pipeline as torch_pipeline
 from src.datasets.meta_dataset import dataset_spec as dataset_spec_lib
@@ -98,12 +98,12 @@ def get_benchmark_by_name(model_name,
                           num_ways,
                           num_shots,
                           num_shots_test,
+                          image_size=84,
                           hidden_size=None,
                           test_dataset=None,
                           metaoptnet_embedding='ResNet',
                           metaoptnet_head='SVM-CS',
-                          use_random_crop=False,
-                          use_color_jitter=False):
+                          use_augmentations=False):
     """Get dataset, model and loss function"""
     from src.maml.model import ModelConvOmniglot, ModelConvMiniImagenet, ModelMLPSinusoid
     from src.reptile.model import ModelConvOmniglot as ModelConvOmniglotReptile
@@ -148,15 +148,11 @@ def get_benchmark_by_name(model_name,
     elif name == 'omniglot':
         class_augmentations = [Rotation([90, 180, 270])]
         transform = []
-        image_size = 28
-        if model_name == 'cnaps':
-            image_size = 84
-        if use_random_crop:
-            transform.append(transforms.RandomResizedCrop(image_size))
-        if use_color_jitter:
-            transform.append(transforms.ColorJitter(brightness=0.5,
-                                                    contrast=0.5,
-                                                    saturation=0.3))
+        if use_augmentations:
+            transform.append(transforms.RandomCrop(image_size, padding=8))
+            transform.append(transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4))
+            transform.append(transforms.RandomHorizontalFlip())
+
         transform.append(Resize(image_size))
         transform.append(ToTensor())
         transform = Compose(transform)
@@ -214,13 +210,12 @@ def get_benchmark_by_name(model_name,
             loss_function = torch.nn.NLLLoss
     elif name == 'miniimagenet':
         transform = []
-        if use_random_crop:
-            transform.append(transforms.RandomResizedCrop(84))
-        if use_color_jitter:
-            transform.append(transforms.ColorJitter(brightness=0.5,
-                                                    contrast=0.5,
-                                                    saturation=0.3))
-        transform.append(Resize(84))
+        if use_augmentations:
+            transform.append(transforms.RandomCrop(image_size, padding=8))
+            transform.append(transforms.ColorJitter(
+                brightness=0.4, contrast=0.4, saturation=0.4))
+            transform.append(transforms.RandomHorizontalFlip())
+        transform.append(Resize(image_size))
         transform.append(ToTensor())
         transform = Compose(transform)
         try:
@@ -274,13 +269,13 @@ def get_benchmark_by_name(model_name,
             loss_function = torch.nn.NLLLoss
     elif name == 'meta_dataset':
         transform = []
-        if use_random_crop:
-            transform.append(transforms.RandomResizedCrop(84))
-        if use_color_jitter:
-            transform.append(transforms.ColorJitter(brightness=0.5,
-                                                    contrast=0.5,
-                                                    saturation=0.3))
-        transform.append(Resize(84))
+        if use_augmentations:
+            transform.append(transforms.RandomCrop(image_size, padding=8))
+            transform.append(transforms.ColorJitter(
+                brightness=0.4, contrast=0.4, saturation=0.4))
+            transform.append(transforms.RandomHorizontalFlip())
+
+        transform.append(Resize(image_size))
         transform.append(ToTensor())
         transform = Compose(transform)
         dataset_spec, data_config, episod_config = get_dataspecs(
@@ -320,7 +315,6 @@ def get_benchmark_by_name(model_name,
             model = MetaOptNet(name, metaoptnet_embedding, metaoptnet_head,
                                num_ways, num_shots, num_shots_test)
             loss_function = torch.nn.NLLLoss
-
     else:
         raise NotImplementedError('Unknown dataset `{0}`.'.format(name))
 

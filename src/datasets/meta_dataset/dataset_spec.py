@@ -23,7 +23,7 @@ from typing import Union, List, Set, Any, Dict
 
 import six
 import numpy as np
-from absl import logging
+import logging
 from six.moves import cPickle as pkl
 
 from src.datasets.meta_dataset.utils import Split

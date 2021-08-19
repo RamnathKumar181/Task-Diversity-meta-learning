@@ -45,11 +45,11 @@ class Reptile(object):
     def __init__(self, model, optimizer=None, step_size=0.1, outer_step_size=0.001, first_order=False,
                  learn_step_size=False, per_param_step_size=False,
                  num_adaptation_steps=1, scheduler=None,
-                 loss_function=torch.nn.NLLLoss, device=None, lr=0.001, ohtm=False):
+                 loss_function=torch.nn.NLLLoss, device=None, meta_lr=0.001, ohtm=False):
         self.model = model.to(device=device)
         self.optimizer = optimizer
         self.step_size = step_size
-        self.lr = lr
+        self.meta_lr = meta_lr
         self.first_order = first_order
         self.num_adaptation_steps = num_adaptation_steps
         self.scheduler = scheduler
@@ -58,6 +58,7 @@ class Reptile(object):
         self.state = None
         self.outer_step_size = outer_step_size
         self.model.to(device=self.device)
+        self.meta_iteration = 0
         self.ohtm = ohtm
         if self.ohtm:
             self.hardest_task = OrderedDict()
@@ -98,54 +99,46 @@ class Reptile(object):
                 'accuracies_before': np.zeros((num_tasks,), dtype=np.float32),
                 'accuracies_after': np.zeros((num_tasks,), dtype=np.float32)
             })
-
-        self.net = self.model.clone()
         for task_id, (train_inputs, train_targets, task, test_inputs, test_targets, _) \
                 in enumerate(zip(*batch['train'], *batch['test'])):
-            self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.lr, betas=(0, 0.999))
-            if self.state is not None:
-                self.optimizer.load_state_dict(self.state)
-
             train_inputs = train_inputs.to(device=self.device)
             train_targets = train_targets.to(device=self.device)
             adaptation_results = self.adapt(train_inputs, train_targets,
                                             is_classification_task=is_classification_task,
                                             num_adaptation_steps=self.num_adaptation_steps,
-                                            step_size=self.step_size)
+                                            step_size=self.step_size, train=train)
             results['inner_losses'][:, task_id] = adaptation_results['inner_losses']
             if is_classification_task:
                 results['accuracies_before'][task_id] = adaptation_results['accuracy_before']
             with torch.set_grad_enabled(self.model.training):
                 test_inputs = test_inputs.to(device=self.device)
-                test_logits = self.model(test_inputs)
+                test_logits = self.net(test_inputs)
 
             if is_classification_task:
                 results['accuracies_after'][task_id] = compute_accuracy(
                     test_logits, test_targets)
-            if self.ohtm and train:
-                self.hardest_task[task.cpu()] = results['accuracies_after'][task_id]
         results['mean_outer_loss'] = 0
         return 0, results
 
     def adapt(self, inputs, targets, is_classification_task=None,
-              num_adaptation_steps=1, step_size=0.1):
+              num_adaptation_steps=1, step_size=0.1, train=False):
+        self.net.train()
         if is_classification_task is None:
             is_classification_task = (not targets.dtype.is_floating_point)
 
         results = {'inner_losses': np.zeros(
             (num_adaptation_steps,), dtype=np.float32)}
-
         for step in range(num_adaptation_steps):
-            logits = self.model(inputs)
+            logits = self.net(inputs)
             inner_loss = self.loss_function(logits, targets)
             results['inner_losses'][step] = inner_loss.item()
 
             if (step == 0) and is_classification_task:
                 results['accuracy_before'] = compute_accuracy(logits, targets)
-
-            self.model.zero_grad()
-            inner_loss.backward()
-            self.optimizer.step()
+            if train:
+                self.net.zero_grad()
+                inner_loss.backward()
+                self.optimizer.step()
         return results
 
     def train(self, dataloader, max_batches=500, meta_opt=None, verbose=True, **kwargs):
@@ -157,6 +150,10 @@ class Reptile(object):
                     postfix['accuracy'] = '{0:.4f}'.format(
                         np.mean(results['accuracies_after']))
                 pbar.set_postfix(**postfix)
+
+    def set_learning_rate(self, optimizer, lr):
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = lr
 
     def train_iter(self, dataloader, max_batches=500, meta_opt=None):
         if self.optimizer is None:
@@ -174,14 +171,27 @@ class Reptile(object):
                 self.optimizer.zero_grad()
 
                 batch = tensors_to_device(batch, device=self.device)
+                self.net = self.model.clone()
+                self.net.train()
+                self.optimizer = torch.optim.Adam(
+                    self.net.parameters(), lr=self.lr, betas=(0, 0.999))
+                if self.state is not None:
+                    self.optimizer.load_state_dict(self.state)
+                meta_lr = self.meta_lr * (1. - self.meta_iteration/float(max_batches*100))
+                self.set_learning_rate(self.meta_optimizer, meta_lr)
+
                 outer_loss, results = self.get_outer_loss(batch, train=True)
                 self.state = self.optimizer.state_dict()
                 self.model.point_grad_to(self.net)
-                meta_opt.step()
+                self.meta_optimizer.step()
                 if self.scheduler is not None:
                     self.scheduler.step(epoch=num_batches)
                 yield results
+                if self.ohtm:
+                    for task_id, (_, _, task) in enumerate(*batch['train']):
+                        self.hardest_task[task.cpu()] = results['accuracies_after'][task_id]
                 num_batches += 1
+                self.meta_iteration += 1
 
     def evaluate(self, dataloader, max_batches=500, verbose=True, **kwargs):
         mean_outer_loss, mean_accuracy, count = 0., 0., 0
@@ -204,12 +214,12 @@ class Reptile(object):
 
     def evaluate_iter(self, dataloader, max_batches=500):
         num_batches = 0
-        self.model.eval()
+        self.net = self.model.clone()
+        self.net.eval()
         while num_batches < max_batches:
             for batch in dataloader:
                 if num_batches >= max_batches:
                     break
-
                 batch = tensors_to_device(batch, device=self.device)
                 _, results = self.get_outer_loss(batch)
                 yield results

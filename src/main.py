@@ -27,13 +27,12 @@ def parse_args():
                                  'matching_networks', 'cnaps', 'metaoptnet'],
                         default='maml',
                         help='Name of the model to be used (default: MAML).')
-    parser.add_argument('--task_sampler', type=str,
-                        choices=['random', 'no_diversity_task',
-                                 'no_diversity_batch', 'no_diversity_tasks_per_batch', 'ohtm'],
-                        default='random',
+    parser.add_argument('--task_sampler', type=int,
+                        choices=[0, 1, 2, 3, 4, 5],
+                        default=0,
                         help='Type of task sampler to be used '
-                        '(default: random).')
-    parser.add_argument('folder', type=str,
+                        '(default: 0).')
+    parser.add_argument('--folder', type=str,
                         help='Path to the folder the data is downloaded to.')
     parser.add_argument('--dataset', type=str,
                         choices=['sinusoid', 'omniglot', 'miniimagenet'],
@@ -56,6 +55,8 @@ def parse_args():
     parser.add_argument('--hidden-size', type=int, default=64,
                         help='Number of channels in each convolution '
                         'layer of the VGG network (default: 64).')
+    parser.add_argument('--image-size', type=int, default=84,
+                        help='Image size (default: 84).')
 
     # Optimization
     parser.add_argument('--batch-size', type=int, default=25,
@@ -104,8 +105,7 @@ def parse_args():
                         '(default: 1).')
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--use-cuda', action='store_true')
-    parser.add_argument('--use-random-crop', action='store_true')
-    parser.add_argument('--use-color-jitter', action='store_true')
+    parser.add_argument('--use-augmentations', action='store_true')
     parser.add_argument('--train', action='store_true')
     parser.add_argument('--log-interval', type=int, default=1,
                         help='Log interval of the model '
@@ -121,10 +121,23 @@ def parse_args():
     return args
 
 
+def get_task_sampler(choice):
+    task_sampler = {0: 'uniform',
+                    1: 'no_diversity_task',
+                    2: 'no_diversity_batch',
+                    3: 'no_diversity_tasks_per_batch',
+                    4: 'ohtm',
+                    5: 'single_batch_uniform'}
+    return task_sampler[choice]
+
+
 if __name__ == '__main__':
     args = parse_args()
     torch.cuda.empty_cache()
-
+    args.task_sampler = get_task_sampler(args.task_sampler)
+    if args.task_sampler == 'single_batch_uniform':
+        args.batch_size = 1
+    args.exp_name = f"{args.exp_name}_{args.task_sampler}_sampler"
     if args.train:
         wandb.init(project='Task_Diversity', config=args, name=args.exp_name,
                    settings=wandb.Settings(start_method='thread'), reinit=False)
@@ -202,6 +215,9 @@ if __name__ == '__main__':
             config['num_batches'] = args.num_batches
         if args.exp_name is not None:
             config['exp_name'] = args.exp_name
+        for arg in vars(args):
+            if arg not in config.keys():
+                config[arg] = getattr(args, arg)
         config['verbose'] = args.verbose
         config['train'] = args.train
         config['dataset_test'] = args.dataset

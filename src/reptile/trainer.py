@@ -52,9 +52,9 @@ class ReptileTrainer():
                                                self.args.num_ways,
                                                self.args.num_shots,
                                                self.args.num_shots_test,
+                                               self.args.image_size,
                                                hidden_size=self.args.hidden_size,
-                                               use_random_crop=self.args.use_random_crop,
-                                               use_color_jitter=self.args.use_color_jitter)
+                                               use_augmentations=self.args.use_augmentations)
         if self.args.task_sampler == 'no_diversity_task':
             logging.info("Using no_diversity_task sampler:\n\n")
             from src.datasets.task_sampler import BatchMetaDataLoaderNDT as BMD_NDT
@@ -114,29 +114,20 @@ class ReptileTrainer():
                                    step_size=self.args.step_size,
                                    outer_step_size=self.args.lr,
                                    loss_function=self.benchmark.loss_function,
-                                   lr=self.args.lr,
+                                   meta_lr=self.args.meta_lr,
                                    device=self.device,
                                    ohtm=self.args.task_sampler == 'ohtm')
         if self.args.task_sampler == 'ohtm':
             self.meta_train_dataloader.init_metalearner(self.metalearner)
 
-    def set_learning_rate(self, optimizer, lr):
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = lr
-
     def _train(self):
         best_value = None
         for epoch in range(self.args.num_epochs):
-            meta_lr = self.args.meta_lr * (1. - epoch/float(self.args.num_epochs))
-            self.set_learning_rate(self.meta_optimizer, meta_lr)
             self.metalearner.train(self.meta_train_dataloader,
-                                   max_batches=self.args.num_batches,
-                                   meta_opt=self.meta_optimizer,
                                    verbose=self.args.verbose,
                                    desc='Training',
                                    leave=False)
             results = self.metalearner.evaluate(self.meta_val_dataloader,
-                                                max_batches=self.args.num_batches,
                                                 verbose=self.args.verbose,
                                                 desc='Validation')
             if (epoch+1) % self.args.log_interval == 0:
@@ -187,10 +178,10 @@ class ReptileTester():
                                                self.config['num_ways'],
                                                self.config['num_shots'],
                                                self.config['num_shots_test'],
+                                               image_size=self.config['image_size'],
                                                hidden_size=self.config['hidden_size'],
-                                               test_dataset=self.config['dataset_test'],
-                                               use_random_crop=self.config['use_random_crop'],
-                                               use_color_jitter=self.config['use_color_jitter'])
+                                               use_augmentations=self.config['use_augmentations'],
+                                               test_dataset=self.config['dataset_test'])
 
         self.meta_test_dataloader = BMD(self.benchmark.meta_test_dataset,
                                         batch_size=self.config['batch_size'],
