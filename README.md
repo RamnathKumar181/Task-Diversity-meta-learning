@@ -13,14 +13,21 @@ pip install -r requirements.txt
 ```
 
 #### Requirements
- - Python 3.8
- - PyTorch 1.7.1
- - Torchvision 0.8.2
- - Torchmeta 1.7.0
- - Pillow 7.2.0
- - qpth 0.0.15
+
+ - absl-py 0.11.0
  - cvxpy 1.1.13
- - numpy 1.21.0
+ - gsutil 4.67
+ - numpy 1.19.5
+ - opencv-python 4.4.0.46
+ - Pillow 7.2.0
+ - Python 3.8
+ - qpth 0.0.15
+ - six 1.15.0
+ - Tensorflow 2.4.0
+ - Torch 1.7.1
+ - Torchmeta 1.7.0
+ - Torchvision 0.8.2
+ - typing-extensions 3.7.4.3
  - wandb 0.11.2
 
 ### Performances
@@ -45,3 +52,6 @@ We experiment on many different algorithms in this repository. To this extent, w
 
 \*\* denotes the Omniglot dataset.
 °° denotes the MiniImagenet dataset.
+
+We had trouble reproducing the results from matching networks using cosine distance since, the convergence seemed to be slow and the final performance dependent on the random initialization. This is similar to what is observed by [other repos](https://github.com/oscarknagg/few-shot).
+Finally, we also notice some discrepancy when it comes to the MetaOptNet. This discrepancy is mainly due to the different setting we run our experiments in. For instance, to test on 5 way-1 shot, we also train the model on 5 way-1 shot mode. However, the official repository for MetaOptNet trains the model on 15 shot, and tests the same model on 5 shot, or 1 shot. We believe this to be the reason for the discrepancy in the performace.
