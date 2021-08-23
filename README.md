@@ -12,24 +12,6 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-#### Requirements
-
- - absl-py 0.11.0
- - cvxpy 1.1.13
- - gsutil 4.67
- - numpy 1.21.2
- - opencv-python 4.4.0.46
- - Pillow 7.2.0
- - Python 3.8
- - qpth 0.0.15
- - six 1.15.0
- - Tensorflow 2.4.0
- - Torch 1.7.1
- - Torchmeta 1.7.0
- - Torchvision 0.8.2
- - typing-extensions 3.7.4.3
- - wandb 0.11.2
-
 ### Datasets
 
 Omniglot and MiniImagenet will be downloaded automatically upon runnning the scripts, with the help of torch-meta. To download meta_dataset, follow the following steps:
