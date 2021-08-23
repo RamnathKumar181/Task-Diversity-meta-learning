@@ -30,6 +30,13 @@ pip install -r requirements.txt
  - typing-extensions 3.7.4.3
  - wandb 0.11.2
 
+### Datasets
+
+Omniglot and MiniImagenet will be downloaded automatically upon runnning the scripts, with the help of torch-meta. To download meta_dataset, follow the following steps:
+* Download ILSVRC2012(`sbatch scripts/download_meta_dataset/install_ilsvrc.sh`) and Cu_birds2012(`http://www.vision.caltech.edu/visipedia-data/CUB-200-2011/CUB_200_2011.tgz`) seperately from the respective links.
+* Run `sbatch scripts/download_meta_dataset/install_meta_dataset_parallel.sh` to download and prune all datasets in a parallel fashion. Note that, due to memory constraints, we are saving ILSVRC2012 in a seperate directory from the other 9 datasets. While running the scripts to train the model, make sure to copy all the datasets to a single directory `$SLURM_TMPDIR`.
+* That's it, you are good to go! :)
+
 ### Performances
 
 We experiment on many different algorithms in this repository. To this extent, we reproduce the reference paper performances, and compare our results below.
