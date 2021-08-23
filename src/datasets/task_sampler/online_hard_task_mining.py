@@ -6,7 +6,6 @@ from torch.utils.data.dataset import Dataset as TorchDataset
 from torchmeta.utils.data.dataset import CombinationMetaDataset
 import random
 import warnings
-from itertools import combinations
 from torch.utils.data.sampler import RandomSampler
 
 
@@ -30,18 +29,20 @@ class OHTMSampler(RandomSampler):
     def __iter__(self):
         num_classes_per_task = self.data_source.num_classes_per_task
         num_classes = len(self.data_source.dataset)
-        for _ in combinations(range(num_classes), num_classes_per_task):
-            if len(self.tasks):
-                x = self.tasks
-                for _ in range(int(self.batch_size/2)):
-                    y = random.sample(x, 1)
-                    x = [item for item in x if item not in y]
-                    yield tuple(y[0])
-                for _ in range(int(self.batch_size/2)):
-                    yield tuple(random.sample(range(num_classes), num_classes_per_task))
-            else:
-                for _ in range(self.batch_size):
-                    yield tuple(random.sample(range(num_classes), num_classes_per_task))
+        if len(self.tasks):
+            x = self.tasks
+            for _ in range(int(self.batch_size/2)):
+                y = random.sample(x, 1)
+                print(f"Task selected ohtm: {tuple(y[0])}")
+                x = [item for item in x if item not in y]
+                yield tuple(y[0])
+            for _ in range(int(self.batch_size/2)):
+                y = random.sample(range(num_classes), num_classes_per_task)
+                print(f"Task selected uniform: {tuple(y)}")
+                yield tuple(y)
+        else:
+            for _ in range(self.batch_size):
+                yield tuple(random.sample(range(num_classes), num_classes_per_task))
 
 
 class MetaDataLoader(DataLoader):

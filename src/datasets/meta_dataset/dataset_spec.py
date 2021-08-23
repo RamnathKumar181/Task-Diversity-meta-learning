@@ -26,7 +26,7 @@ import os
 
 from absl import logging
 from src.datasets.meta_dataset import imagenet_specification
-from src.datasets.meta_dataset import learning_spec
+from src.datasets.meta_dataset.utils import Split
 import numpy as np
 import six
 from six.moves import cPickle as pkl
@@ -55,14 +55,14 @@ def get_classes(split, classes_per_split):
     num_classes = classes_per_split[split]
 
     # Find the starting index of classes for the given split.
-    if split == learning_spec.Split.TRAIN:
+    if split == Split.TRAIN:
         offset = 0
-    elif split == learning_spec.Split.VALID:
-        offset = classes_per_split[learning_spec.Split.TRAIN]
-    elif split == learning_spec.Split.TEST:
+    elif split == Split.VALID:
+        offset = classes_per_split[Split.TRAIN]
+    elif split == Split.TEST:
         offset = (
-            classes_per_split[learning_spec.Split.TRAIN] +
-            classes_per_split[learning_spec.Split.VALID])
+            classes_per_split[Split.TRAIN] +
+            classes_per_split[Split.VALID])
     else:
         raise ValueError('Invalid dataset split.')
 
@@ -85,8 +85,8 @@ def _check_validity_of_restricted_classes_per_split(
     """
     for split_enum, num_classes in restricted_classes_per_split.items():
         if split_enum not in [
-            learning_spec.Split.TRAIN, learning_spec.Split.VALID,
-            learning_spec.Split.TEST
+            Split.TRAIN, Split.VALID,
+            Split.TEST
         ]:
             raise ValueError('Invalid key {} in restricted_classes_per_split.'
                              'Valid keys are: learning_spec.Split.TRAIN, '
@@ -223,11 +223,11 @@ class BenchmarkSpecification(
             else:
                 classes_per_split = dataset_spec.classes_per_split
             invalid_train_split = ('train' in dataset_splits and
-                                   not classes_per_split[learning_spec.Split.TRAIN])
+                                   not classes_per_split[Split.TRAIN])
             invalid_valid_split = ('valid' in dataset_splits and
-                                   not classes_per_split[learning_spec.Split.VALID])
+                                   not classes_per_split[Split.VALID])
             invalid_test_split = ('test' in dataset_splits and
-                                  not classes_per_split[learning_spec.Split.TEST])
+                                  not classes_per_split[Split.TEST])
             if invalid_train_split or invalid_valid_split or invalid_test_split:
                 raise ValueError('A dataset can not contribute to a split if it has '
                                  'no classes assigned to that split.')
@@ -462,16 +462,16 @@ class BiLevelDatasetSpecification(
         Raises:
           ValueError: Invalid dataset split.
         """
-        if split == learning_spec.Split.TRAIN:
+        if split == Split.TRAIN:
             offset = 0
-        elif split == learning_spec.Split.VALID:
+        elif split == Split.VALID:
             previous_superclasses = range(
-                0, self.superclasses_per_split[learning_spec.Split.TRAIN])
+                0, self.superclasses_per_split[Split.TRAIN])
             offset = self._count_classes_in_superclasses(previous_superclasses)
-        elif split == learning_spec.Split.TEST:
+        elif split == Split.TEST:
             previous_superclasses = range(
-                0, self.superclasses_per_split[learning_spec.Split.TRAIN] +
-                self.superclasses_per_split[learning_spec.Split.VALID])
+                0, self.superclasses_per_split[Split.TRAIN] +
+                self.superclasses_per_split[Split.VALID])
             offset = self._count_classes_in_superclasses(previous_superclasses)
         else:
             raise ValueError('Invalid dataset split.')
@@ -595,7 +595,7 @@ class HierarchicalDatasetSpecification(
 
         # Map each class ID to its corresponding number of examples.
         examples_per_class = {}
-        for split in learning_spec.Split:
+        for split in Split:
             leaves = imagenet_specification.get_leaves(self.split_subgraphs[split])
             for node in leaves:
                 num_examples = self.images_per_class[split][node]
@@ -619,8 +619,8 @@ class HierarchicalDatasetSpecification(
 
         classes_per_split = {}
         for split in [
-            learning_spec.Split.TRAIN, learning_spec.Split.VALID,
-            learning_spec.Split.TEST
+            Split.TRAIN, Split.VALID,
+            Split.TEST
         ]:
             classes_per_split[split] = count_split_classes(split)
         return classes_per_split
@@ -643,7 +643,6 @@ class HierarchicalDatasetSpecification(
         # hasn't already been done.
         if not hasattr(self, 'classes_per_split'):
             self.initialize()
-        print(split, self.get_classes_per_split)
         return get_classes(split, self.classes_per_split)
 
     def get_total_images_per_class(self, class_id, pool=None):
@@ -725,7 +724,7 @@ def as_dataset_spec(dct):
     def _key_to_split(dct):
         """Returns a new dictionary whith keys converted to Split enums."""
         return {
-            learning_spec.Split[key]: value for key, value in six.iteritems(dct)
+            Split[key]: value for key, value in six.iteritems(dct)
         }
 
     if dct['__class__'] == 'DatasetSpecification':
@@ -766,7 +765,7 @@ def as_dataset_spec(dct):
         # WordNet ID to Synset objects.
         split_subgraphs = {}
         wn_id_to_node = {}
-        for split in learning_spec.Split:
+        for split in Split:
             split_subgraphs[split] = imagenet_specification.import_graph(
                 dct['split_subgraphs'][split.name])
             for synset in split_subgraphs[split]:
@@ -782,7 +781,7 @@ def as_dataset_spec(dct):
                 wn_id_to_node[wn_id]: int(count)
                 for wn_id, count in six.iteritems(wn_id_counts)
             }
-            images_per_class[learning_spec.Split[split_name]] = synset_counts
+            images_per_class[Split[split_name]] = synset_counts
 
         return HierarchicalDatasetSpecification(
             name=dct['name'],

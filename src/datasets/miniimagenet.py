@@ -118,6 +118,7 @@ class MiniImagenetClassDataset(ClassDataset):
     def __getitem__(self, index):
         class_name = self.labels[index % self.num_classes]
         data = self.data[class_name]
+        print("Getting data")
         print(f"Task failing: {index}, {type(index)}")
         transform = self.get_transform(index, self.transform)
         target_transform = self.get_target_transform(index)
