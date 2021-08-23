@@ -42,14 +42,16 @@ class Reptile(object):
            arXiv preprint arXiv:1803.02999 (2018).
     """
 
-    def __init__(self, model, optimizer=None, step_size=0.1, outer_step_size=0.001, first_order=False,
+    def __init__(self, model, optimizer=None, meta_optimizer=None, step_size=0.1, outer_step_size=0.001, first_order=False,
                  learn_step_size=False, per_param_step_size=False,
                  num_adaptation_steps=1, scheduler=None,
-                 loss_function=torch.nn.NLLLoss, device=None, meta_lr=0.001, ohtm=False):
+                 loss_function=torch.nn.NLLLoss, device=None, meta_lr=0.001, lr=0.001, ohtm=False):
         self.model = model.to(device=device)
         self.optimizer = optimizer
+        self.meta_optimizer = meta_optimizer
         self.step_size = step_size
         self.meta_lr = meta_lr
+        self.lr = lr
         self.first_order = first_order
         self.num_adaptation_steps = num_adaptation_steps
         self.scheduler = scheduler
@@ -141,9 +143,9 @@ class Reptile(object):
                 self.optimizer.step()
         return results
 
-    def train(self, dataloader, max_batches=500, meta_opt=None, verbose=True, **kwargs):
+    def train(self, dataloader, max_batches=500, verbose=True, **kwargs):
         with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
-            for results in self.train_iter(dataloader, max_batches=max_batches, meta_opt=meta_opt):
+            for results in self.train_iter(dataloader, max_batches=max_batches):
                 pbar.update(1)
                 postfix = {'loss': 'NaN'}
                 if 'accuracies_after' in results:
@@ -155,26 +157,19 @@ class Reptile(object):
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
 
-    def train_iter(self, dataloader, max_batches=500, meta_opt=None):
-        if self.optimizer is None:
-            raise RuntimeError('Trying to call `train_iter`, while the '
-                               'optimizer is `None`. In order to train `{0}`, you must '
-                               'specify a Pytorch optimizer as the argument of `{0}` '
-                               '(eg. `{0}(model, optimizer=torch.optim.SGD(model.'
-                               'parameters(), lr=0.01), ...).'.format(__class__.__name__))
+    def train_iter(self, dataloader, max_batches=500):
         num_batches = 0
         self.model.train()
         while num_batches < max_batches:
             for batch in dataloader:
                 if num_batches >= max_batches:
                     break
-                self.optimizer.zero_grad()
-
                 batch = tensors_to_device(batch, device=self.device)
                 self.net = self.model.clone()
-                self.net.train()
                 self.optimizer = torch.optim.Adam(
                     self.net.parameters(), lr=self.lr, betas=(0, 0.999))
+                self.net.train()
+                self.optimizer.zero_grad()
                 if self.state is not None:
                     self.optimizer.load_state_dict(self.state)
                 meta_lr = self.meta_lr * (1. - self.meta_iteration/float(max_batches*100))

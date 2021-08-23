@@ -5,30 +5,28 @@ from pathlib import Path
 class DataConfig(object):
     """Common configuration options for creating data processing pipelines."""
 
-    def __init__(self, path, batch_size=256, val_batch_size=1, num_workers=4, image_size=84):
+    def __init__(self, path):
         """Initialize a DataConfig.
         """
 
         # General info
         self.path: Path = Path(path)
-        self.batch_size: int = batch_size
-        self.val_batch_size: int = val_batch_size
-        self.num_workers: int = num_workers
+        self.batch_size: int = 256
+        self.val_batch_size: int = 1
+        self.num_workers: int = 4
         self.shuffle: bool = True
 
         # Transforms and augmentations
-        self.image_size: Tuple[int, int] = image_size
-        self.test_transforms: bool = True
-        self.train_transforms: bool = True
+        self.image_size: Tuple[int, int] = 84
+        self.test_transforms: bool = ['resize', 'center_crop', 'to_tensor', 'normalize']
+        self.train_transforms: bool = ['random_resized_crop',
+                                       'jitter', 'random_flip', 'to_tensor', 'normalize']
 
 
 class EpisodeDescriptionConfig(object):
     """Configuration options for episode characteristics."""
 
-    def __init__(self, num_ways, num_query, num_support, min_ways=5, max_ways_upper_bound=50, max_num_query=10,
-                 max_support_set_size=500, max_support_size_contrib_per_class=100, min_log_weight=-0.69314718055994529,
-                 max_log_weight=0.69314718055994529, ignore_dag_ontology=False, ignore_bilevel_ontology=False,
-                 ignore_hierarchy_probability=False, min_examples_in_class=0, num_unique_descriptions=0):
+    def __init__(self, num_ways, num_shots, num_shots_test):
         """Initialize a EpisodeDescriptionConfig.
 
         This is used in sampling.py in Trainer and in EpisodeDescriptionSampler to
@@ -72,7 +70,7 @@ class EpisodeDescriptionConfig(object):
             min_examples_in_class: An integer, the minimum number of examples that a
                 class has to contain to be considered. All classes with fewer examples
                 will be ignored. 0 means no classes are ignored, so having classes with
-                no examples may trigger erroargsrs later. For variable shots, a value of 2
+                no examples may trigger errors later. For variable shots, a value of 2
                 makes it sure that there are at least one support and one query samples.
                 For fixed shots, you could set it to `num_support + num_query`.
 
@@ -82,15 +80,15 @@ class EpisodeDescriptionConfig(object):
         arg_groups = {
             'num_ways': (num_ways,
                          ('min_ways', 'max_ways_upper_bound'),
-                         (min_ways, max_ways_upper_bound)),
-            'num_query': (num_query, ignore_bilevel_ontology
+                         (5, 50)),
+            'num_query': (num_shots_test,
                           ('max_num_query',),
-                          (max_num_query,)),
-            'num_support': (num_support,  # noqa: E131
+                          (10,)),
+            'num_support': (num_shots,  # noqa: E131
                             ('max_support_set_size', 'max_support_size_contrib_per_class',
                              'min_log_weight', 'max_log_weight'),
-                            (max_support_set_size, max_support_size_contrib_per_class,
-                             min_log_weight, max_log_weight)),
+                            (500, 100,
+                             -0.69314718055994529, 0.69314718055994529)),
         }
 
         for first_arg_name, values in arg_groups.items():
@@ -107,20 +105,20 @@ class EpisodeDescriptionConfig(object):
                     '%s' % (none_arg_names, first_arg_name, none_arg_names))
 
         self.num_ways: int = num_ways if num_ways > 0 else None
-        self.num_support: int = num_support if num_support > 0 else None
-        self.num_query: int = num_query if num_query > 0 else None
-        self.min_ways: int = min_ways
-        self.max_ways_upper_bound: int = max_ways_upper_bound
-        self.max_num_query: int = max_num_query
-        self.max_support_set_size: int = max_support_set_size
-        self.max_support_size_contrib_per_class: int = max_support_size_contrib_per_class
-        self.min_log_weight: float = min_log_weight
-        self.max_log_weight: float = max_log_weight
-        self.ignore_dag_ontology: bool = ignore_dag_ontology
-        self.ignore_bilevel_ontology: bool = ignore_bilevel_ontology
-        self.ignore_hierarchy_probability: bool = ignore_hierarchy_probability
-        self.min_examples_in_class: int = min_examples_in_class
-        self.num_unique_descriptions: int = num_unique_descriptions
+        self.num_support: int = num_shots_test if num_shots_test > 0 else None
+        self.num_query: int = num_shots if num_shots > 0 else None
+        self.min_ways: int = 5
+        self.max_ways_upper_bound: int = 50
+        self.max_num_query: int = 10
+        self.max_support_set_size: int = 500
+        self.max_support_size_contrib_per_class: int = 100
+        self.min_log_weight: float = -0.69314718055994529
+        self.max_log_weight: float = 0.69314718055994529
+        self.ignore_dag_ontology: bool = False
+        self.ignore_bilevel_ontology: bool = False
+        self.ignore_hierarchy_probability: bool = 0
+        self.min_examples_in_class: int = 0
+        self.num_unique_descriptions: int = 0
 
         self.use_dag_ontology: bool
         self.use_bilevel_ontology: bool

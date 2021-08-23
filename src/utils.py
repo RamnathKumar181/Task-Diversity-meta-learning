@@ -15,6 +15,8 @@ from typing import Any, Tuple, cast, Callable
 from src.datasets.meta_dataset import config as config_lib
 from src.datasets.meta_dataset import pipeline as torch_pipeline
 from src.datasets.meta_dataset import dataset_spec as dataset_spec_lib
+from src.datasets.meta_dataset.utils import Split
+
 
 Benchmark = namedtuple('Benchmark', 'meta_train_dataset meta_val_dataset '
                        'meta_test_dataset model loss_function')
@@ -209,6 +211,7 @@ def get_benchmark_by_name(model_name,
                                num_ways, num_shots, num_shots_test)
             loss_function = torch.nn.NLLLoss
     elif name == 'miniimagenet':
+        print("Using miniimagenet for sure")
         transform = []
         if use_augmentations:
             transform.append(transforms.RandomCrop(image_size, padding=8))
@@ -280,20 +283,21 @@ def get_benchmark_by_name(model_name,
         transform = Compose(transform)
         dataset_spec, data_config, episod_config = get_dataspecs(
             folder, num_ways, num_shots, num_shots_test)
+        pipeline_fn: Callable[..., torch.utils.data.Dataset]
         pipeline_fn = cast(Callable[..., torch.utils.data.Dataset],
                            torch_pipeline.make_episode_pipeline)
 
         meta_train_dataset: torch.utils.data.Dataset = pipeline_fn(dataset_spec=dataset_spec,
                                                                    data_config=data_config,
-                                                                   split=0,
+                                                                   split=Split["TRAIN"],
                                                                    episode_descr_config=episod_config)
         meta_val_dataset: torch.utils.data.Dataset = pipeline_fn(dataset_spec=dataset_spec,
                                                                  data_config=data_config,
-                                                                 split=1,
+                                                                 split=Split["VALID"],
                                                                  episode_descr_config=episod_config)
         meta_test_dataset: torch.utils.data.Dataset = pipeline_fn(dataset_spec=dataset_spec,
                                                                   data_config=data_config,
-                                                                  split=2,
+                                                                  split=Split["TEST"],
                                                                   episode_descr_config=episod_config)
         if model_name == 'maml':
             model = ModelConvMiniImagenet(num_ways, hidden_size=hidden_size)

@@ -129,8 +129,12 @@ class OHTM(object):
 
     def __next__(self):
         self.index += 1
+        self.metalearner.hardest_task = OrderedDict(sorted(
+            self.metalearner.hardest_task.items(), key=lambda x: x[1]))
+        print(self.metalearner.hardest_task)
         self.prune_task_buffer()
         task_for_batch = self.get_hardest_scores()
+        print(f"Hardest tasks: {task_for_batch}")
         for batch in BatchMetaDataLoaderOHTM(self.dataset,
                                              batch_size=self.batch_size,
                                              shuffle=self.shuffle,

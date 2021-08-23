@@ -1,4 +1,4 @@
-import logging
+from absl import logging
 from typing import Union, List, Tuple
 import numpy as np
 from numpy.random import RandomState

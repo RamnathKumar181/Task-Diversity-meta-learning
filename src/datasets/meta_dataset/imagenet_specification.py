@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2020 The Meta-Dataset Authors.
+# Copyright 2021 The Meta-Dataset Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,14 +24,37 @@ ImageNet's ontology in particular is described in the article.
 """
 # TODO(manzagop): relocate the code pertaining to imagenet ingestion to
 # dataset_conversion. The code dealing with sampling from a tree should stay.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import json
 import os
 
-import logging
+from absl import logging
 from src.datasets.meta_dataset import imagenet_stats
 import numpy as np
 import six
+import tensorflow.compat.v1 as tf
+
+tf.flags.DEFINE_string(
+    'ilsvrc_2012_data_root',
+    '',
+    'Path to the root of the ImageNet data.')
+
+tf.flags.DEFINE_string(
+    'path_to_is_a',
+    '',
+    'Path to the file containing is-a relationships (parent, child) pairs. '
+    'If empty, it defaults to "wordnet.is_a.txt" in ilsvrc_2012_data_root.')
+
+tf.flags.DEFINE_string(
+    'path_to_words',
+    '',
+    'Path to the file containing (synset, word description) pairs. '
+    'If empty, it defaults to "words.txt" in ilsvrc_2012_data_root.')
+
+FLAGS = tf.flags.FLAGS
 
 
 class Synset(object):
@@ -41,10 +64,10 @@ class Synset(object):
         """Initialize a Synset.
 
         Args:
-            wn_id: WordNet id
-            words: word description of the synset
-            children: a set of children Synsets
-            parents: a set of parent Synsets
+          wn_id: WordNet id
+          words: word description of the synset
+          children: a set of children Synsets
+          parents: a set of parent Synsets
         """
         self.wn_id = wn_id
         self.words = words
@@ -56,10 +79,10 @@ def get_node_ancestors(synset):
     """Create a set consisting of all and only the ancestors of synset.
 
     Args:
-        synset: A Synset.
+      synset: A Synset.
 
     Returns:
-        ancestors: A set of Synsets
+      ancestors: A set of Synsets
     """
     ancestors = set()
     # In the following line, synset.parents already is a set but we create a copy
@@ -81,10 +104,10 @@ def get_ancestors(synsets):
     """Create a set consisting of all and only the ancestors of leaves.
 
     Args:
-        synsets: A list of Synsets.
+      synsets: A list of Synsets.
 
     Returns:
-        A set of Synsets.
+      A set of Synsets.
     """
     all_ancestors = set()
     for s in synsets:
@@ -101,7 +124,7 @@ def isolate_graph(nodes):
     This requires breaking the necessary parent / child links.
 
     Args:
-        nodes: A set of Synsets
+      nodes: A set of Synsets
     """
     for n in nodes:
         n.children = list(nodes & set(n.children))
@@ -125,12 +148,12 @@ def collapse(nodes):
     its parent(s).
 
     Args:
-        nodes: A set of Synsets.
+      nodes: A set of Synsets.
 
     Returns:
-        A set containing the Synsets in nodes that were not collapsed, with
-        potentially modified children and parents lists due to collapsing other
-        synsets.
+      A set containing the Synsets in nodes that were not collapsed, with
+      potentially modified children and parents lists due to collapsing other
+      synsets.
     """
 
     def collapse_once(nodes):
@@ -173,11 +196,11 @@ def get_synsets_from_ids(wn_ids, synsets):
     """Finds the Synsets in synsets whose WordNet id's are in wn_ids.
 
     Args:
-        wn_ids: A list of WordNet id's.
-        synsets: A set of Synsets.
+      wn_ids: A list of WordNet id's.
+      synsets: A set of Synsets.
 
     Returns:
-        A dict mapping each WordNet id in wn_ids to the corresponding Synset.
+      A dict mapping each WordNet id in wn_ids to the corresponding Synset.
     """
     wn_ids = set(wn_ids)
     requested_synsets = {}
@@ -186,7 +209,8 @@ def get_synsets_from_ids(wn_ids, synsets):
             requested_synsets[s.wn_id] = s
 
     found = set(requested_synsets.keys())
-    assert found == wn_ids, ('Did not find synsets for ids: {}.'.format(wn_ids - found))
+    assert found == wn_ids, ('Did not find synsets for ids: {}.'.format(wn_ids -
+                                                                        found))
     return requested_synsets
 
 
@@ -200,11 +224,11 @@ def get_spanning_leaves(nodes):
     A leaf node spans exactly one leaf: itself.
 
     Args:
-        nodes: A set of Synsets
+      nodes: A set of Synsets
 
     Returns:
-        spanning_leaves: a dict mapping Synset instances to the set of leaf Synsets
-            that are their descendants.
+      spanning_leaves: a dict mapping Synset instances to the set of leaf Synsets
+        that are their descendants.
     """
     # First find the leaves
     leaves = get_leaves(nodes)
@@ -228,12 +252,12 @@ def get_num_spanning_images(spanning_leaves, num_leaf_images):
     sampling graph).
 
     Args:
-        spanning_leaves: a dict mapping each node to the set of leaves it spans.
-        num_leaf_images: a dict mapping each leaf synset to its number of images.
+      spanning_leaves: a dict mapping each node to the set of leaves it spans.
+      num_leaf_images: a dict mapping each leaf synset to its number of images.
 
     Returns:
-        num_images: a dict that maps each node in the sampling graph to the number
-            of images in the leaves that it spans.
+      num_images: a dict that maps each node in the sampling graph to the number
+        of images in the leaves that it spans.
     """
     num_images = {}
     for node, leaves in spanning_leaves.items():
@@ -252,16 +276,16 @@ def create_sampling_graph(synsets, root=None):
     it's not possible to create an episode from that node).
 
     Args:
-        synsets: A list of Synsets
-        root: Optionally, a Synset. If provided, it imposes a restriction on which
-            ancestors of the given synsets will be included in the sampling graph.
-            Specifically, an ancestor of a Synset in synsets in will be included only
-            if it is the root or a descendent of the root. This is useful when
-            creating the validation and test sub- graphs, where we want the designated
-            root to indeed have to upward connections in the corresponding subgraph.
+      synsets: A list of Synsets
+      root: Optionally, a Synset. If provided, it imposes a restriction on which
+        ancestors of the given synsets will be included in the sampling graph.
+        Specifically, an ancestor of a Synset in synsets in will be included only
+        if it is the root or a descendent of the root. This is useful when
+        creating the validation and test sub- graphs, where we want the designated
+        root to indeed have to upward connections in the corresponding subgraph.
 
     Returns:
-        A set of the Synsets of the DAG.
+      A set of the Synsets of the DAG.
     """
     # Get the set of Synsets containing all and only the ancestors of synsets.
     nodes = get_ancestors(synsets)
@@ -297,25 +321,25 @@ def propose_valid_test_roots(spanning_leaves,
     classes in the training / validation / testing splits, resp.
 
     Args:
-        spanning_leaves: A dict mapping each Synset to the leaf Synsets that are
-            reachable from it.
-        margin: The number of additional or fewer leaves that the root of a split's
-            subgraph can span compared to the expected number of classes for the
-            corresponding split. This is needed for this splitting method, as there
-            may not be a node in the tree that spans exactly the expected number of
-            classes for some split.
-        desired_num_valid_classes: num classes desirably assigned to the validation
-            split. ILSVRC 2012 has a total of 1000 classes, so 15% corresponds to 150
-            classes, hence the default value of 150.
-        desired_num_test_classes: similarly as above, but for the test split.
+      spanning_leaves: A dict mapping each Synset to the leaf Synsets that are
+        reachable from it.
+      margin: The number of additional or fewer leaves that the root of a split's
+        subgraph can span compared to the expected number of classes for the
+        corresponding split. This is needed for this splitting method, as there
+        may not be a node in the tree that spans exactly the expected number of
+        classes for some split.
+      desired_num_valid_classes: num classes desirably assigned to the validation
+        split. ILSVRC 2012 has a total of 1000 classes, so 15% corresponds to 150
+        classes, hence the default value of 150.
+      desired_num_test_classes: similarly as above, but for the test split.
 
     Returns:
-        a dict that maps 'valid' and 'test' to the synset that spans the leaves that
-            will desirably be assigned to that split.
+      a dict that maps 'valid' and 'test' to the synset that spans the leaves that
+        will desirably be assigned to that split.
 
     Raises:
-        RuntimeError: When no candidate subgraph roots are available with the given
-            margin value.
+      RuntimeError: When no candidate subgraph roots are available with the given
+        margin value.
     """
     # Sort in decreasing order of the length of the lists of spanning leaves, so
     # e.g. the node that spans the most leaves will be the first element.  Ties
@@ -347,8 +371,8 @@ def propose_valid_test_roots(spanning_leaves,
 
     # For displaying the list of candidates
     for cand in valid_candidates:
-        logging.info('Candidate %s, %s with %d spanning leaves',
-                     cand.words, cand.wn_id, len(spanning_leaves[cand]))
+        logging.info('Candidate %s, %s with %d spanning leaves', cand.words,
+                     cand.wn_id, len(spanning_leaves[cand]))
 
     # Propose the first possible candidate for each of validation and test
     valid_root = valid_candidates[0]
@@ -377,22 +401,22 @@ def get_class_splits(spanning_leaves, valid_test_roots=None, **kwargs):
     the two randomly (roughly equally).
 
     Args:
-        spanning_leaves: A dict mapping each Synset to the leaf Synsets that are
-            reachable from it.
-        valid_test_roots: A dict whose keys should be 'valid' and 'test' and whose
-            value for a given key is a Synset that spans all and only the leaves that
-            will desirably be assigned to the corresponding split.
-        **kwargs: Keyword arguments for the root proposer that is used if
-            valid_test_roots is None.
+      spanning_leaves: A dict mapping each Synset to the leaf Synsets that are
+        reachable from it.
+      valid_test_roots: A dict whose keys should be 'valid' and 'test' and whose
+        value for a given key is a Synset that spans all and only the leaves that
+        will desirably be assigned to the corresponding split.
+      **kwargs: Keyword arguments for the root proposer that is used if
+        valid_test_roots is None.
 
     Returns:
-        split_classes: A dict that maps each of 'train', 'valid' and 'test' to the
-            set of WordNet id's of the classes for the corresponding split.
-        valid_test_roots: A dict of the same form as the corresponding optional
-            argument.
+      split_classes: A dict that maps each of 'train', 'valid' and 'test' to the
+        set of WordNet id's of the classes for the corresponding split.
+      valid_test_roots: A dict of the same form as the corresponding optional
+        argument.
 
     Raises:
-        ValueError: when the provided valid_test_roots are invalid.
+      ValueError: when the provided valid_test_roots are invalid.
     """
     if valid_test_roots is not None:
         if valid_test_roots['valid'] is None or valid_test_roots['test'] is None:
@@ -449,23 +473,23 @@ def init_split_subgraphs(class_splits, spanning_leaves, valid_test_roots):
     instead of the original one.
 
     Args:
-        class_splits: a dict whose keys are 'train', 'valid' and 'test' and whose
-            value for a given key is the set of WordNet id's of the classes that are
-            assigned to the corresponding split.
-        spanning_leaves: A dict mapping each Synset to the leaf Synsets that are
-            reachable from it.
-        valid_test_roots: A dict whose keys should be 'valid' and 'test' and whose
-            value for a given key is a Synset that spans all and only the leaves that
-            will desirably be assigned to the corresponding split.
+      class_splits: a dict whose keys are 'train', 'valid' and 'test' and whose
+        value for a given key is the set of WordNet id's of the classes that are
+        assigned to the corresponding split.
+      spanning_leaves: A dict mapping each Synset to the leaf Synsets that are
+        reachable from it.
+      valid_test_roots: A dict whose keys should be 'valid' and 'test' and whose
+        value for a given key is a Synset that spans all and only the leaves that
+        will desirably be assigned to the corresponding split.
 
     Returns:
-        a dict mapping each of 'train', 'valid' and 'test' to the set of Synsets (of
-        the respective copy of the graph) corresponding to the classes that are
-        assigned to that split.
+      a dict mapping each of 'train', 'valid' and 'test' to the set of Synsets (of
+      the respective copy of the graph) corresponding to the classes that are
+      assigned to that split.
 
     Raises:
-        ValueError: invalid keys for valid_test_roots, or same synset provided as
-            the root of both valid and test.
+      ValueError: invalid keys for valid_test_roots, or same synset provided as
+        the root of both valid and test.
     """
     # Get the wn_id's of the train, valid and test classes.
     train_wn_ids = class_splits['train']
@@ -477,8 +501,10 @@ def init_split_subgraphs(class_splits, spanning_leaves, valid_test_roots):
 
     # Get 3 full copies of the graph that will be modified downstream.
     graph_copy_train, _ = copy_graph(spanning_leaves.keys())
-    graph_copy_valid, valid_root = copy_graph(spanning_leaves.keys(), valid_root_wn_id)
-    graph_copy_test, test_root = copy_graph(spanning_leaves.keys(), test_root_wn_id)
+    graph_copy_valid, valid_root = copy_graph(spanning_leaves.keys(),
+                                              valid_root_wn_id)
+    graph_copy_test, test_root = copy_graph(spanning_leaves.keys(),
+                                            test_root_wn_id)
 
     # Get the nodes of each copy that correspond to the splits' assigned classes.
     train_classes = set([s for s in graph_copy_train if s.wn_id in train_wn_ids])
@@ -507,12 +533,12 @@ def copy_graph(nodes, root_wn_id=None):
     will be returned.
 
     Args:
-        nodes: A set of Synsets.
-        root_wn_id: The wn_id field of the Synset that is intended to eventually be
-            the root of the new graph.
+      nodes: A set of Synsets.
+      root_wn_id: The wn_id field of the Synset that is intended to eventually be
+        the root of the new graph.
 
     Returns:
-        copy: A set of Synsets of the same size as nodes.
+      copy: A set of Synsets of the same size as nodes.
     """
     root_copy = None
     copy = {}  # maps wn_id's to Synsets
@@ -550,23 +576,23 @@ def create_splits(spanning_leaves, split_enum, valid_test_roots=None, **kwargs):
     these two roots is made in get_class_splits.
 
     Args:
-        spanning_leaves: A dict mapping each Synset to the leaf Synsets that are
-            reachable from it.
-        split_enum: A class that inherits from enum.Enum whose attributes are TRAIN,
-            VALID, and TEST, which are mapped to enumerated constants.
-        valid_test_roots: dict that provides for each of 'valid' and 'test' a synset
-            that is the ancestor of all and only the leaves that will be assigned to
-            the corresponding split.
-        **kwargs: keyword args for the function used to propose valid_test_roots,
-            which will be called if split_classes is empty and no valid_test_roots are
-            provided.
+      spanning_leaves: A dict mapping each Synset to the leaf Synsets that are
+        reachable from it.
+      split_enum: A class that inherits from enum.Enum whose attributes are TRAIN,
+        VALID, and TEST, which are mapped to enumerated constants.
+      valid_test_roots: dict that provides for each of 'valid' and 'test' a synset
+        that is the ancestor of all and only the leaves that will be assigned to
+        the corresponding split.
+      **kwargs: keyword args for the function used to propose valid_test_roots,
+        which will be called if split_classes is empty and no valid_test_roots are
+        provided.
 
     Returns:
-        splits: a dict mapping each Split in split_enum to the set of Synsets in the
-            subgraph of that split. This is different from the split_classes dict,
-            which contained lists of only the leaves of the corresponding graphs.
-        roots: a dict of the same type as valid_test_roots. If it was provided, it
-            is returned unchanged. Otherwise the newly created one is returned.
+      splits: a dict mapping each Split in split_enum to the set of Synsets in the
+        subgraph of that split. This is different from the split_classes dict,
+        which contained lists of only the leaves of the corresponding graphs.
+      roots: a dict of the same type as valid_test_roots. If it was provided, it
+        is returned unchanged. Otherwise the newly created one is returned.
     """
     # The classes (leaf Synsets of the overall graph) of each split.
     split_classes, valid_test_roots = get_class_splits(
@@ -575,7 +601,8 @@ def create_splits(spanning_leaves, split_enum, valid_test_roots=None, **kwargs):
     # The copies of the leaf and desired root Synsets for each split. Copies are
     # needed since in each sub-graph those nodes will have different children /
     # parent lists.
-    leaves, roots = init_split_subgraphs(split_classes, spanning_leaves, valid_test_roots)
+    leaves, roots = init_split_subgraphs(split_classes, spanning_leaves,
+                                         valid_test_roots)
 
     # Create the split sub-graphs as described above.
     train_graph = create_sampling_graph(leaves['train'])
@@ -603,8 +630,8 @@ def is_descendent(d, a):
     A node is not considered a descendent of itself.
 
     Args:
-        d: A Synset.
-        a: A Synset.
+      d: A Synset.
+      a: A Synset.
     """
     paths = get_upward_paths_from(d, end=a)
     # The second clause ensures that a node is not a descendent of itself (our
@@ -620,12 +647,12 @@ def get_upward_paths_from(start, end=None):
     whose first elements is a Synset without parents and whose last element is s.
 
     Args:
-        start: A Synset.
-        end: A Synset. If not provided, the end point will be the first node that is
-            encountered starting from start that does not have parents.
+      start: A Synset.
+      end: A Synset. If not provided, the end point will be the first node that is
+        encountered starting from start that does not have parents.
 
     Returns:
-        A list of lists, containing all paths as described above.
+      A list of lists, containing all paths as described above.
     """
 
     def is_end_node(n):
@@ -670,13 +697,13 @@ def find_lowest_common_in_paths(path_a, path_b):
     element 2 occurs in position 0 in the first list and position 2 in the second.
 
     Args:
-        path_a: A list.
-        path_b: A list.
+      path_a: A list.
+      path_b: A list.
 
     Returns:
-        lowest_common: The element with the smallest 'height' that is common between
-            path_a and path_b.
-        height: The height of lowest_common, computed as described above.
+      lowest_common: The element with the smallest 'height' that is common between
+        path_a and path_b.
+      height: The height of lowest_common, computed as described above.
     """
     # Maps elements that appear in both lists to their heights.
     common_elements, heights = [], []
@@ -715,16 +742,16 @@ def get_lowest_common_ancestor(leaf_a, leaf_b, path='longest'):
     LCA over all is returned.
 
     Args:
-        leaf_a: A Synset.
-        leaf_b: A Synset.
-        path: A str. One of 'longest', or 'all'.
+      leaf_a: A Synset.
+      leaf_b: A Synset.
+      path: A str. One of 'longest', or 'all'.
 
     Returns:
-        lca: A Synset. The lowest common ancestor.
-        height_of_lca: An int. The height of the lowest common ancestor.
+      lca: A Synset. The lowest common ancestor.
+      height_of_lca: An int. The height of the lowest common ancestor.
 
     Raises:
-        ValueError: Invalid path. Must be 'longest', or 'all'.
+      ValueError: Invalid path. Must be 'longest', or 'all'.
     """
     if path not in ['longest', 'all']:
         raise ValueError('Invalid path. Must be "longest", or "all".')
@@ -767,19 +794,19 @@ def get_num_synset_2012_images(path, synsets_2012, files_to_skip=None):
     and stored at path.
 
     Args:
-        path: An optional path to a cache where the computed dict is / may be
-            stored.
-        synsets_2012: A list of Synsets.
-        files_to_skip: A set with the files that repeat in other datasets.
+      path: An optional path to a cache where the computed dict is / may be
+        stored.
+      synsets_2012: A list of Synsets.
+      files_to_skip: A set with the files that repeat in other datasets.
 
     Returns:
-        a dict mapping the WordNet id of each ILSVRC 2012 class to its number of
-        images.
+      a dict mapping the WordNet id of each ILSVRC 2012 class to its number of
+      images.
     """
     if path:
         logging.info('Attempting to read number of leaf images from %s...', path)
-        if os.path.exists(path):
-            with open(path, 'r') as f:
+        if tf.io.gfile.exists(path):
+            with tf.io.gfile.GFile(path, 'r') as f:
                 num_synset_2012_images = json.load(f)
                 logging.info('Successful.')
                 return num_synset_2012_images
@@ -790,7 +817,7 @@ def get_num_synset_2012_images(path, synsets_2012, files_to_skip=None):
     num_synset_2012_images = {}
     for s_2012 in synsets_2012:
         synset_dir = os.path.join(FLAGS.ilsvrc_2012_data_root, s_2012.wn_id)
-        all_files = set(os.listdir(synset_dir))
+        all_files = set(tf.io.gfile.listdir(synset_dir))
         img_files = set([f for f in all_files if f.lower().endswith('jpeg')])
         final_files = img_files - files_to_skip
         skipped_files = all_files - final_files
@@ -800,7 +827,7 @@ def get_num_synset_2012_images(path, synsets_2012, files_to_skip=None):
         num_synset_2012_images[s_2012.wn_id] = len(final_files)
 
     if path:
-        with open(path, 'w') as f:
+        with tf.io.gfile.GFile(path, 'w') as f:
             json.dump(num_synset_2012_images, f, indent=2)
 
     return num_synset_2012_images
@@ -820,10 +847,10 @@ def export_graph(nodes):
     - The parents and children of each Synset in `nodes` is also in `nodes`.
 
     Args:
-        nodes: A set of Synset objects, representing a complete graph.
+      nodes: A set of Synset objects, representing a complete graph.
 
     Returns:
-        A list of dictionaries, following the representation described above.
+      A list of dictionaries, following the representation described above.
     """
     node_representations = []
     wn_ids_to_synsets = {synset.wn_id: synset for synset in nodes}
@@ -855,10 +882,10 @@ def import_graph(node_representations):
     of that representation.
 
     Args:
-        node_representations: A list of dictionaries, each representing a Synset.
+      node_representations: A list of dictionaries, each representing a Synset.
 
     Returns:
-        A set of Synset objects (nodes), representing a graph.
+      A set of Synset objects (nodes), representing a graph.
     """
     graph = set()
     # Build one Synset node for each WordNet ID, and keep a mapping.
@@ -868,7 +895,8 @@ def import_graph(node_representations):
         wn_id = node_repr['wn_id']
         words = node_repr['words']
         if wn_id in wn_id_to_node:
-            raise ValueError('Duplicate Word ID (%s, %s) in the imported graph.' % (wn_id, words))
+            raise ValueError('Duplicate Word ID (%s, %s) in the imported graph.' %
+                             (wn_id, words))
         node = Synset(wn_id=wn_id, words=words, children=set(), parents=set())
         wn_id_to_node[wn_id] = node
 
@@ -904,30 +932,30 @@ def create_imagenet_specification(split_enum,
     to reach another node that also belongs to the DAG.
 
     Args:
-        split_enum: A class that inherits from enum.Enum whose attributes are TRAIN,
-            VALID, and TEST, which are mapped to enumerated constants.
-        files_to_skip: A set with the files that intersect with other datasets.
-        path_to_num_leaf_images: A string, representing a path to a file containing
-            a dict that maps the WordNet id of each ILSVRC 2012 class to the
-            corresponding number of images. If no file is present, it will be created
-            in order to save on future computation. If None, no attempt at reloading
-            or storing the dict is made.
-        train_split_only: bool, if True, we return the whole Imagenet as our
-            training set.
-        log_stats: whether to print statistics about the sampling graph and the
-            three split subgraphs
+      split_enum: A class that inherits from enum.Enum whose attributes are TRAIN,
+        VALID, and TEST, which are mapped to enumerated constants.
+      files_to_skip: A set with the files that intersect with other datasets.
+      path_to_num_leaf_images: A string, representing a path to a file containing
+        a dict that maps the WordNet id of each ILSVRC 2012 class to the
+        corresponding number of images. If no file is present, it will be created
+        in order to save on future computation. If None, no attempt at reloading
+        or storing the dict is made.
+      train_split_only: bool, if True, we return the whole Imagenet as our
+        training set.
+      log_stats: whether to print statistics about the sampling graph and the
+        three split subgraphs
 
     Returns:
-        A tuple of the following:
-        splits: A dict mapping each Split in split_enum to the list of Synsets
-            belonging to the subgraph for that split.
-        split_num_images: A dict mapping each Split in split_enum to a dict for the
-            corresponding split that maps each node in its subgraph to the number of
-            images in the subgraph of that node.
-        sampling_graph: A set of the Synsets that belong to the DAG described above
-        synsets_2012: The list of Synsets of classes of ILSVRC 2012
-        num_synset_2012_images: A dict mapping each WordNet id of ILSVRC 2012 to its
-            number of images
+      A tuple of the following:
+      splits: A dict mapping each Split in split_enum to the list of Synsets
+        belonging to the subgraph for that split.
+      split_num_images: A dict mapping each Split in split_enum to a dict for the
+        corresponding split that maps each node in its subgraph to the number of
+        images in the subgraph of that node.
+      sampling_graph: A set of the Synsets that belong to the DAG described above
+      synsets_2012: The list of Synsets of classes of ILSVRC 2012
+      num_synset_2012_images: A dict mapping each WordNet id of ILSVRC 2012 to its
+        number of images
     """
     # Create Synsets for all ImageNet synsets (82115 in total).
     data_root = FLAGS.ilsvrc_2012_data_root
@@ -935,7 +963,7 @@ def create_imagenet_specification(split_enum,
     path_to_words = FLAGS.path_to_words
     if not path_to_words:
         path_to_words = os.path.join(data_root, 'words.txt')
-    with open(path_to_words) as f:
+    with tf.io.gfile.GFile(path_to_words) as f:
         for line in f:
             wn_id, words = line.rstrip().split('\t')
             synsets[wn_id] = Synset(wn_id, words, set(), set())
@@ -944,17 +972,17 @@ def create_imagenet_specification(split_enum,
     path_to_is_a = FLAGS.path_to_is_a
     if not path_to_is_a:
         path_to_is_a = os.path.join(data_root, 'wordnet.is_a.txt')
-    with open(path_to_is_a, 'r') as f:
+    with tf.io.gfile.GFile(path_to_is_a, 'r') as f:
         for line in f:
             parent, child = line.rstrip().split(' ')
             synsets[parent].children.add(synsets[child])
             synsets[child].parents.add(synsets[parent])
 
     # Get the WordNet id's of the synsets of ILSVRC 2012.
-    wn_ids_2012 = os.listdir(data_root)
+    wn_ids_2012 = tf.io.gfile.listdir(data_root)
     wn_ids_2012 = set(
         entry for entry in wn_ids_2012
-        if os.path.isdir(os.path.join(data_root, entry)))
+        if tf.io.gfile.isdir(os.path.join(data_root, entry)))
     synsets_2012 = [s for s in synsets.values() if s.wn_id in wn_ids_2012]
     assert len(wn_ids_2012) == len(synsets_2012)
 
@@ -987,7 +1015,8 @@ def create_imagenet_specification(split_enum,
         # create_splits for more information on how these are used).
         valid_test_roots = {
             'valid': get_synset_by_wnid('n02075296', sampling_graph),  # 'carnivore'
-            'test': get_synset_by_wnid('n03183080', sampling_graph)  # 'device'
+            'test':
+                get_synset_by_wnid('n03183080', sampling_graph)  # 'device'
         }
         # The valid_test_roots returned here correspond to the same Synsets as in
         # the above dict, but are the copied versions of them for each subgraph.

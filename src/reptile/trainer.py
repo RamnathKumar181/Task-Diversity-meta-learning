@@ -100,8 +100,9 @@ class ReptileTrainer():
                                        num_workers=self.args.num_workers,
                                        pin_memory=True)
 
-        self.optimizer = torch.optim.Adam(self.benchmark.model.parameters(),
-                                          lr=self.args.lr, betas=(0, 0.999))
+        self.optimizer = torch.optim.Adam(
+            self.benchmark.model.parameters(), lr=self.args.lr, betas=(0, 0.999))
+
         self.meta_optimizer = torch.optim.SGD(self.benchmark.model.parameters(),
                                               lr=self.args.meta_lr)
         wandb.watch(self.benchmark.model)
@@ -109,12 +110,14 @@ class ReptileTrainer():
     def _build_metalearner(self):
 
         self.metalearner = Reptile(self.benchmark.model,
-                                   self.optimizer,
+                                   optimizer=self.optimizer,
                                    num_adaptation_steps=self.args.num_steps,
                                    step_size=self.args.step_size,
                                    outer_step_size=self.args.lr,
                                    loss_function=self.benchmark.loss_function,
+                                   meta_optimizer=self.meta_optimizer,
                                    meta_lr=self.args.meta_lr,
+                                   lr=self.args.lr,
                                    device=self.device,
                                    ohtm=self.args.task_sampler == 'ohtm')
         if self.args.task_sampler == 'ohtm':
@@ -125,8 +128,7 @@ class ReptileTrainer():
         for epoch in range(self.args.num_epochs):
             self.metalearner.train(self.meta_train_dataloader,
                                    verbose=self.args.verbose,
-                                   desc='Training',
-                                   leave=False)
+                                   desc='Training')
             results = self.metalearner.evaluate(self.meta_val_dataloader,
                                                 verbose=self.args.verbose,
                                                 desc='Validation')

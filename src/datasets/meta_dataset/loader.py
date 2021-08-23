@@ -1,4 +1,3 @@
-import argparse
 from pathlib import Path
 from functools import partial
 from typing import Any, Callable, Iterable, Tuple, Union, cast
@@ -19,11 +18,11 @@ DL = Union[DataLoader,
            Iterable[Tuple[Tensor, ...]]]
 
 
-def get_dataspecs(args: argparse.Namespace,
+def get_dataspecs(path, num_ways, num_shots, num_shots_test,
                   source: str) -> Tuple[Any, Any, Any]:
     # Recovering data
-    data_config = config_lib.DataConfig(args=args)
-    episod_config = config_lib.EpisodeDescriptionConfig(args=args)
+    data_config = config_lib.DataConfig(path=path)
+    episod_config = config_lib.EpisodeDescriptionConfig(num_ways, num_shots, num_shots_test)
 
     use_bilevel_ontology = False
     use_dag_ontology = False
@@ -45,14 +44,16 @@ def get_dataspecs(args: argparse.Namespace,
     return dataset_spec, data_config, episod_config
 
 
-def get_dataloader(args: argparse.Namespace,
+def get_dataloader(path,
                    source: str,
                    batch_size: int,
                    split: Split,
                    world_size: int,
                    version: str,
-                   episodic: bool):
-    dataset_spec, data_config, episod_config = get_dataspecs(args, source)
+                   episodic: bool,
+                   num_ways, num_shots, num_shots_test):
+    dataset_spec, data_config, episod_config = get_dataspecs(
+        path, num_ways, num_shots, num_shots_test)
     num_classes = len(dataset_spec.get_classes(split=split))
 
     pipeline_fn: Callable[..., Dataset]
@@ -65,7 +66,7 @@ def get_dataloader(args: argparse.Namespace,
                                        split=split,
                                        episode_descr_config=episod_config)
 
-        worker_init_fn = partial(worker_init_fn_, seed=args.seed)
+        worker_init_fn = partial(worker_init_fn_, seed=2021)
         data_loader = DataLoader(dataset=dataset,
                                  batch_size=int(batch_size / world_size),
                                  num_workers=data_config.num_workers,

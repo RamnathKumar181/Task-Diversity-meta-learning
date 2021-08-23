@@ -18,7 +18,7 @@
 
 import collections
 
-import logging
+from absl import logging
 import numpy as np
 
 
