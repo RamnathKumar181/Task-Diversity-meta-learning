@@ -232,6 +232,7 @@ class OmniglotTaskDataset(Dataset):
                                                   target_transform=target_transform)
         self.data = data
         self.character_name = character_name
+        self.index = index
 
     def __len__(self):
         return len(self.data)
@@ -247,4 +248,4 @@ class OmniglotTaskDataset(Dataset):
             image = self.transform(image)
         if self.target_transform is not None:
             target = self.target_transform(target)
-        return (image, target, index)
+        return (image, target, self.index)
