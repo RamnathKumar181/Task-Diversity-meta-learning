@@ -42,5 +42,5 @@ We experiment on many different algorithms in this repository. To this extent, w
 \*\* denotes the Omniglot dataset.
 °° denotes the MiniImagenet dataset.
 
-We had trouble reproducing the results from matching networks using cosine distance since, the convergence seemed to be slow and the final performance dependent on the random initialization. This is similar to what is observed by [other repos](https://github.com/oscarknagg/few-shot).
+We had trouble reproducing the results from matching networks using cosine distance since, the convergence seemed to be slow and the final performance dependent on the random initialization. This is similar to what is observed by [other repos](https://github.com/oscarknagg/few-shot). \
 Finally, we also notice some discrepancy when it comes to the MetaOptNet. This discrepancy is mainly due to the different setting we run our experiments in. For instance, to test on 5 way-1 shot, we also train the model on 5 way-1 shot mode. However, the official repository for MetaOptNet trains the model on 15 shot, and tests the same model on 5 shot, or 1 shot. We believe this to be the reason for the discrepancy in the performace.
