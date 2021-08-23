@@ -17,7 +17,7 @@ pip install -r requirements.txt
  - absl-py 0.11.0
  - cvxpy 1.1.13
  - gsutil 4.67
- - numpy 1.19.5
+ - numpy 1.21.2
  - opencv-python 4.4.0.46
  - Pillow 7.2.0
  - Python 3.8
