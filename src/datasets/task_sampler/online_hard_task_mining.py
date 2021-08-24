@@ -7,6 +7,7 @@ from torchmeta.utils.data.dataset import CombinationMetaDataset
 import random
 import warnings
 from torch.utils.data.sampler import RandomSampler
+import ast
 
 
 class OHTMSampler(RandomSampler):
@@ -31,15 +32,12 @@ class OHTMSampler(RandomSampler):
         num_classes = len(self.data_source.dataset)
         if len(self.tasks):
             x = self.tasks
-            for _ in range(int(self.batch_size/2)):
+            for _ in range(len(self.tasks)):
                 y = random.sample(x, 1)
-                print(f"Task selected ohtm: {tuple(y[0])}")
                 x = [item for item in x if item not in y]
                 yield tuple(y[0])
-            for _ in range(int(self.batch_size/2)):
-                y = random.sample(range(num_classes), num_classes_per_task)
-                print(f"Task selected uniform: {tuple(y)}")
-                yield tuple(y)
+            for _ in range(int(self.batch_size-len(self.tasks))):
+                yield tuple(random.sample(range(num_classes), num_classes_per_task))
         else:
             for _ in range(self.batch_size):
                 yield tuple(random.sample(range(num_classes), num_classes_per_task))
@@ -114,7 +112,7 @@ class OHTM(object):
 
     def get_hardest_scores(self):
         if self.index >= self.hard_mining_threshold:
-            hardest_tasks = [task.cpu().tolist() for task in list(self.metalearner.hardest_task.keys())[
+            hardest_tasks = [ast.literal_eval(task) for task in list(self.metalearner.hardest_task.keys())[
                 :int(self.batch_size/2)]]
         else:
             hardest_tasks = []
@@ -130,12 +128,10 @@ class OHTM(object):
 
     def __next__(self):
         self.index += 1
-        self.metalearner.hardest_task = OrderedDict(sorted(
-            self.metalearner.hardest_task.items(), key=lambda x: x[1]))
-        print(self.metalearner.hardest_task)
+        self.metalearner.hardest_task = OrderedDict({k: v for k,
+                                                     v in sorted(self.metalearner.hardest_task.items(), key=lambda item: item[1])})
         self.prune_task_buffer()
         task_for_batch = self.get_hardest_scores()
-        print(f"Hardest tasks: {task_for_batch}")
         for batch in BatchMetaDataLoaderOHTM(self.dataset,
                                              batch_size=self.batch_size,
                                              shuffle=self.shuffle,

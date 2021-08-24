@@ -112,7 +112,7 @@ class MetaOptNet(object):
             if is_classification_task:
                 results['accuracies'][task_id] = accuracy
             if self.ohtm and train:
-                self.hardest_task[task.cpu()] = results['accuracies'][task_id]
+                self.hardest_task[str(task.cpu().tolist())] = results['accuracies'][task_id]
 
         mean_loss.div_(num_tasks)
         results['mean_loss'] = mean_loss.item()

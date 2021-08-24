@@ -119,6 +119,9 @@ class Reptile(object):
             if is_classification_task:
                 results['accuracies_after'][task_id] = compute_accuracy(
                     test_logits, test_targets)
+            if self.ohtm and train:
+                self.hardest_task[str(task.cpu().tolist())] = results['accuracies_after'][task_id]
+
         results['mean_outer_loss'] = 0
         return 0, results
 

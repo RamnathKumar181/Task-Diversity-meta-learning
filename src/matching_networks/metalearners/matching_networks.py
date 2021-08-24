@@ -115,7 +115,7 @@ class MatchingNetwork(object):
             results['accuracies'] = torch.mean(accuracy).item()
         if self.ohtm and train:
             for task_id, (_, _, task) in enumerate(*batch['train']):
-                self.hardest_task[task.cpu()] = accuracy[task_id]
+                self.hardest_task[str(task.cpu().tolist())] = accuracy[task_id]
 
         mean_loss.div_(num_tasks)
         results['mean_loss'] = mean_loss.item()

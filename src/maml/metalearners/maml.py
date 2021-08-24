@@ -133,7 +133,7 @@ class ModelAgnosticMetaLearning(object):
                 results['accuracies_after'][task_id] = compute_accuracy(
                     test_logits, test_targets)
             if self.ohtm and train:
-                self.hardest_task[task.cpu()] = results['accuracies_after'][task_id]
+                self.hardest_task[str(task.cpu().tolist())] = results['accuracies_after'][task_id]
 
         mean_outer_loss.div_(num_tasks)
         results['mean_outer_loss'] = mean_outer_loss.item()
