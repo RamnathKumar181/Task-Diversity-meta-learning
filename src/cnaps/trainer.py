@@ -61,7 +61,7 @@ class CNAPTrainer():
             from src.datasets.task_sampler import BatchMetaDataLoaderNDT as BMD_NDT
             self.meta_train_dataloader = BMD_NDT(self.benchmark.meta_train_dataset,
                                                  batch_size=self.args.batch_size,
-                                                 shuffle=True,
+                                                 shuffle=False if self.args.dataset == 'meta_dataset' else True,
                                                  num_workers=self.args.num_workers,
                                                  pin_memory=True)
         elif self.args.task_sampler == 'no_diversity_batch':
@@ -69,7 +69,7 @@ class CNAPTrainer():
             from src.datasets.task_sampler import BatchMetaDataLoaderNDB as BMD_NDB
             self.meta_train_dataloader = BMD_NDB(self.benchmark.meta_train_dataset,
                                                  batch_size=self.args.batch_size,
-                                                 shuffle=True,
+                                                 shuffle=False if self.args.dataset == 'meta_dataset' else True,
                                                  num_workers=self.args.num_workers,
                                                  pin_memory=True)
         elif self.args.task_sampler == 'no_diversity_tasks_per_batch':
@@ -77,7 +77,7 @@ class CNAPTrainer():
             from src.datasets.task_sampler import BatchMetaDataLoaderNDTB as BMD_NDTB
             self.meta_train_dataloader = BMD_NDTB(self.benchmark.meta_train_dataset,
                                                   batch_size=self.args.batch_size,
-                                                  shuffle=True,
+                                                  shuffle=False if self.args.dataset == 'meta_dataset' else True,
                                                   num_workers=self.args.num_workers,
                                                   pin_memory=True)
         elif self.args.task_sampler == 'ohtm':

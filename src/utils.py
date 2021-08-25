@@ -77,12 +77,12 @@ def get_dataspecs(folder, num_ways, num_shots, num_shots_test,
     use_bilevel_ontology = False
     use_dag_ontology = False
 
-    # Enable ontology aware sampling for Omniglot and ImageNet.
-    if source == 'omniglot':
-        # use_bilevel_ontology_list[sources.index('omniglot')] = True
-        use_bilevel_ontology = True
-    if source == 'ilsvrc_2012':
-        use_dag_ontology = True
+    # # Enable ontology aware sampling for Omniglot and ImageNet.
+    # if source == 'omniglot':
+    #     # use_bilevel_ontology_list[sources.index('omniglot')] = True
+    #     use_bilevel_ontology = True
+    # if source == 'ilsvrc_2012':
+    #     use_dag_ontology = True
 
     episod_config.use_bilevel_ontology = use_bilevel_ontology
     episod_config.use_dag_ontology = use_dag_ontology

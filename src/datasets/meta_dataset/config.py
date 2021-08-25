@@ -120,8 +120,8 @@ class EpisodeDescriptionConfig(object):
         self.min_examples_in_class: int = 0
         self.num_unique_descriptions: int = 0
 
-        self.use_dag_ontology: bool
-        self.use_bilevel_ontology: bool
+        self.use_dag_ontology: bool = False
+        self.use_bilevel_ontology: bool = False
 
     def max_ways(self) -> int:
         """Returns the way (maximum way if variable) of the episode."""

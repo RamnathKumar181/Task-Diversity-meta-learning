@@ -103,8 +103,6 @@ class ReptileTrainer():
         self.optimizer = torch.optim.Adam(
             self.benchmark.model.parameters(), lr=self.args.lr, betas=(0, 0.999))
 
-        self.meta_optimizer = torch.optim.SGD(self.benchmark.model.parameters(),
-                                              lr=self.args.meta_lr)
         wandb.watch(self.benchmark.model)
 
     def _build_metalearner(self):
@@ -115,7 +113,6 @@ class ReptileTrainer():
                                    step_size=self.args.step_size,
                                    outer_step_size=self.args.lr,
                                    loss_function=self.benchmark.loss_function,
-                                   meta_optimizer=self.meta_optimizer,
                                    meta_lr=self.args.meta_lr,
                                    lr=self.args.lr,
                                    device=self.device,

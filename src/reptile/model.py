@@ -1,6 +1,4 @@
 import torch.nn as nn
-import torch
-from torch.autograd import Variable
 
 from collections import OrderedDict
 from torchmeta.modules import (MetaModule, MetaConv2d,
@@ -17,30 +15,7 @@ def conv_block(in_channels, out_channels, **kwargs):
     ]))
 
 
-class ReptileModel(nn.Module):
-
-    def __init__(self):
-        nn.Module.__init__(self)
-
-    def point_grad_to(self, target):
-        '''
-        Set .grad attribute of each parameter to be proportional
-        to the difference between self and target
-        '''
-        for p, target_p in zip(self.parameters(), target.parameters()):
-            if p.grad is None:
-                if self.is_cuda():
-                    p.grad = Variable(torch.zeros(p.size())).cuda()
-                else:
-                    p.grad = Variable(torch.zeros(p.size()))
-            p.grad.data.zero_()  # not sure this is required
-            p.grad.data.add_(p.data - target_p.data)
-
-    def is_cuda(self):
-        return next(self.parameters()).is_cuda
-
-
-class MetaConvModel(ReptileModel):
+class MetaConvModel(nn.Module):
     """4-layer Convolutional Neural Network architecture from [1].
     Parameters
     ----------
@@ -85,14 +60,6 @@ class MetaConvModel(ReptileModel):
         features = features.view((features.size(0), -1))
         logits = self.classifier(features)
         return logits
-
-    def clone(self):
-        clone = MetaConvModel(self.in_channels, self.out_features,
-                              self.hidden_size, self.feature_size)
-        clone.load_state_dict(self.state_dict())
-        if self.is_cuda():
-            clone.cuda()
-        return clone
 
 
 class MetaMLPModel(MetaModule):
