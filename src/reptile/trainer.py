@@ -113,8 +113,6 @@ class ReptileTrainer():
                                    step_size=self.args.step_size,
                                    outer_step_size=self.args.lr,
                                    loss_function=self.benchmark.loss_function,
-                                   meta_lr=self.args.meta_lr,
-                                   lr=self.args.lr,
                                    device=self.device,
                                    ohtm=self.args.task_sampler == 'ohtm')
         if self.args.task_sampler == 'ohtm':
