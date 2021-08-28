@@ -26,7 +26,7 @@ We experiment on many different algorithms in this repository. To this extent, w
 | Model | 1-shot (5-way Acc.) <br>**| 1-shot (5-way Acc.) <br>°°|
 | --- | --- | --- |
 | MAML ([reference paper](https://arxiv.org/pdf/1703.03400.pdf)) | 98.7% | 48.7% |
-| MAML (this repo) | 98.55% | - |
+| MAML (this repo) | 98.16% | 49.26% |
 | Matching Networks ([reference paper](https://arxiv.org/pdf/1606.04080.pdf)) | 98.1% | 46.6% |
 | Matching Networks (this repo) | 94.90% | 43.88% |
 | MetaOptNet ([reference paper](https://arxiv.org/pdf/1904.03758.pdf)) | - | 64.09%
@@ -35,7 +35,7 @@ We experiment on many different algorithms in this repository. To this extent, w
 | Protonet (this repo) | 97.94% | 48.68% |
 | Reptile ([reference paper](https://arxiv.org/pdf/1803.02999.pdf)) | 97.68% | 49.97% |
 | Reptile (this repo) | - | - |
-| Simple CNAPS ([reference paper](https://arxiv.org/pdf/1906.07697.pdf)) | - |53.2% |
+| Simple CNAPS ([reference paper](https://arxiv.org/pdf/1906.07697.pdf)) | - | - |
 | Simple CNAPS (this repo) | 95.23% | 64.52% |
 
 
