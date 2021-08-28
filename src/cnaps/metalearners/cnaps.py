@@ -106,7 +106,7 @@ class CNAPs(object):
             train_targets = train_targets.to(device=self.device)
             test_inputs = test_inputs.to(device=self.device)
             test_targets = test_targets.to(device=self.device)
-            target_logits = self.model(train_inputs, train_targets, test_inputs)
+            target_logits, _ = self.model(train_inputs, train_targets, test_inputs)
             loss = self.loss_function(target_logits, test_targets) / 16
             regularization_term = (
                 self.model.feature_adaptation_network.regularization_term()).cuda(0)

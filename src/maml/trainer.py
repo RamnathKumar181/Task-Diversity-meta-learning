@@ -91,6 +91,23 @@ class MAMLTrainer():
                                               shuffle=True,
                                               num_workers=self.args.num_workers,
                                               pin_memory=True)
+        elif self.args.task_sampler == 's-DPP':
+            logging.info("Using Static DPP task sampler:\n\n")
+            from src.datasets.task_sampler import sDPP
+            self.meta_train_dataloader = sDPP(self.benchmark.meta_train_dataset,
+                                              batch_size=self.args.batch_size,
+                                              shuffle=False if self.args.dataset == "meta_dataset" else True,
+                                              num_workers=self.args.num_workers,
+                                              pin_memory=True,
+                                              dataset_name=self.args.dataset)
+        elif self.args.task_sampler == 'd-DPP':
+            logging.info("Using Dynamic DPP task sampler:\n\n")
+            from src.datasets.task_sampler import dDPP
+            self.meta_train_dataloader = dDPP(self.benchmark.meta_train_dataset,
+                                              batch_size=self.args.batch_size,
+                                              shuffle=False if self.args.dataset == "meta_dataset" else True,
+                                              num_workers=self.args.num_workers,
+                                              pin_memory=True)
         else:
             logging.info("Using uniform_task sampler:\n\n")
             self.meta_train_dataloader = BMD(self.benchmark.meta_train_dataset,
@@ -118,7 +135,7 @@ class MAMLTrainer():
                                 loss_function=self.benchmark.loss_function,
                                 device=self.device,
                                 ohtm=self.args.task_sampler == 'ohtm')
-        if self.args.task_sampler == 'ohtm':
+        if self.args.task_sampler in ['ohtm', 'd-DPP']:
             self.meta_train_dataloader.init_metalearner(self.metalearner)
 
     def _train(self):

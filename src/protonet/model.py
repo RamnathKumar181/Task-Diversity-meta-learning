@@ -39,7 +39,7 @@ class Protonet(nn.Module):
 
     def forward(self, x):
         y = self.encoder(x.view(-1, *x.shape[2:]))
-        return y.view(*x.shape[:2], -1)
+        return y.view(*x.shape[:2], -1), y.view(*x.shape[:2], -1)
 
 
 def Protonet_Omniglot(out_features=64, hidden_size=64):

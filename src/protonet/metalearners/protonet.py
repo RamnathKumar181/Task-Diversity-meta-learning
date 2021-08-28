@@ -82,9 +82,9 @@ class PrototypicalNetwork(object):
         train_targets = train_targets.to(device=self.device)
         test_inputs = test_inputs.to(device=self.device)
         test_targets = test_targets.to(device=self.device)
-        train_embeddings = self.model(train_inputs)
+        train_embeddings, _ = self.model(train_inputs)
         prototypes = get_prototypes(train_embeddings, train_targets, self.num_ways)
-        test_embeddings = self.model(test_inputs)
+        test_embeddings, _ = self.model(test_inputs)
         loss, accuracy = self.loss_function(
             prototypes, test_embeddings, test_targets)
         loss.backward()

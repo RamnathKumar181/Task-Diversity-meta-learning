@@ -107,7 +107,7 @@ def get_benchmark_by_name(model_name,
                           metaoptnet_head='SVM-CS',
                           use_augmentations=False):
     """Get dataset, model and loss function"""
-    from src.maml.model import ModelConvOmniglot, ModelConvMiniImagenet, ModelMLPSinusoid
+    from src.maml.model import ModelConvOmniglot, ModelConvMiniImagenet
     from src.reptile.model import ModelConvOmniglot as ModelConvOmniglotReptile
     from src.reptile.model import ModelConvMiniImagenet as ModelConvMiniImagenetReptile
     from src.protonet.model import Protonet_Omniglot, Protonet_MiniImagenet
@@ -122,32 +122,7 @@ def get_benchmark_by_name(model_name,
     if test_dataset is not None:
         folder = test_dataset
 
-    if name == 'sinusoid':
-        transform = ToTensor1D()
-
-        meta_train_dataset = Sinusoid(num_shots + num_shots_test,
-                                      num_tasks=1000000,
-                                      transform=transform,
-                                      target_transform=transform,
-                                      dataset_transform=dataset_transform)
-        meta_val_dataset = Sinusoid(num_shots + num_shots_test,
-                                    num_tasks=1000000,
-                                    transform=transform,
-                                    target_transform=transform,
-                                    dataset_transform=dataset_transform)
-        meta_test_dataset = Sinusoid(num_shots + num_shots_test,
-                                     num_tasks=1000000,
-                                     transform=transform,
-                                     target_transform=transform,
-                                     dataset_transform=dataset_transform)
-
-        if model_name in ['maml', 'reptile']:
-            model = ModelMLPSinusoid(hidden_sizes=[40, 40])
-            loss_function = F.mse_loss
-        if model_name in ['protonet', 'matching_networks', 'cnaps', 'metaoptnet']:
-            raise NotImplementedError(f"Not implemented for {model_name} on sinusoid dataset")
-
-    elif name == 'omniglot':
+    if name == 'omniglot':
         class_augmentations = [Rotation([90, 180, 270])]
         transform = []
         if use_augmentations:

@@ -164,6 +164,7 @@ class Reptile(object):
         self.model.train()
         frac_done = self.meta_iteration/100
         cur_meta_step_size = frac_done*self.meta_lr_final + (1-frac_done)*self.meta_lr
+        print(cur_meta_step_size)
         while num_batches < max_batches:
             for batch in dataloader:
                 if num_batches >= max_batches:

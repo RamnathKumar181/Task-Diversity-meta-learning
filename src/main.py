@@ -28,7 +28,7 @@ def parse_args():
                         default='maml',
                         help='Name of the model to be used (default: MAML).')
     parser.add_argument('--task_sampler', type=int,
-                        choices=[0, 1, 2, 3, 4, 5],
+                        choices=[0, 1, 2, 3, 4, 5, 6, 7],
                         default=0,
                         help='Type of task sampler to be used '
                         '(default: 0).')
@@ -127,7 +127,9 @@ def get_task_sampler(choice):
                     2: 'no_diversity_batch',
                     3: 'no_diversity_tasks_per_batch',
                     4: 'ohtm',
-                    5: 'single_batch_uniform'}
+                    5: 'single_batch_uniform',
+                    6: 's-DPP',
+                    7: 'd-DPP'}
     return task_sampler[choice]
 
 

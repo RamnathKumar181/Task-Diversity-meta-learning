@@ -124,7 +124,7 @@ class ModelAgnosticMetaLearning(object):
             with torch.set_grad_enabled(self.model.training):
                 test_inputs = test_inputs.to(device=self.device)
                 test_targets = test_targets.to(device=self.device)
-                test_logits = self.model(test_inputs, params=params)
+                test_logits, _ = self.model(test_inputs, params=params)
                 outer_loss = self.loss_function(test_logits, test_targets)
                 results['outer_losses'][task_id] = outer_loss.item()
                 mean_outer_loss += outer_loss
@@ -150,7 +150,7 @@ class ModelAgnosticMetaLearning(object):
             (num_adaptation_steps,), dtype=np.float32)}
 
         for step in range(num_adaptation_steps):
-            logits = self.model(inputs, params=params)
+            logits, _ = self.model(inputs, params=params)
             inner_loss = self.loss_function(logits, targets)
             results['inner_losses'][step] = inner_loss.item()
 

@@ -61,7 +61,7 @@ class MetaConvModel(MetaModule):
         features = features.view((features.size(0), -1))
         logits = self.classifier(features,
                                  params=self.get_subdict(params, 'classifier'))
-        return logits
+        return logits, features
 
 
 class MetaMLPModel(MetaModule):
