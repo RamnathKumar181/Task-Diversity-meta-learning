@@ -95,4 +95,4 @@ class MetaOptNet(nn.Module):
 
         accuracy = count_accuracy(logit_query.reshape(-1, self.train_way),
                                   target_y.reshape(-1)).item()
-        return accuracy, crossentropy_loss
+        return accuracy, crossentropy_loss, emb_support
