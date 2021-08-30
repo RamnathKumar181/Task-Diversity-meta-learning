@@ -410,7 +410,7 @@ class Cnaps(nn.Module):
         self.class_representations.clear()
 
         # this adds back extra first dimension for num_samples
-        return split_first_dim_linear(sample_logits, [NUM_SAMPLES, target_images.shape[0]]), self.task_representation
+        return split_first_dim_linear(sample_logits, [NUM_SAMPLES, target_images.shape[0]]), context_features
 
     def _get_features(self, context_images, target_images):
         """

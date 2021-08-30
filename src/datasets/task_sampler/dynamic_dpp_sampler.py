@@ -73,13 +73,13 @@ class DPPSampler(RandomSampler):
     def __iter__(self):
         num_classes_per_task = self.data_source.num_classes_per_task
         num_classes = len(self.data_source.dataset)
-        if self.DPP is not None:
+        if self.DPP is None:
+            for _ in range(self.batch_size):
+                yield tuple(random.sample(range(num_classes), num_classes_per_task))
+        else:
             for _ in range(self.batch_size):
                 self.DPP.sample_exact_k_dpp(size=num_classes_per_task, random_state=self.rng)
                 yield tuple(self.DPP.list_of_samples[-1])
-        else:
-            for _ in range(self.batch_size):
-                yield tuple(random.sample(range(num_classes), num_classes_per_task))
 
 
 class MetaDataLoader(DataLoader):
@@ -136,7 +136,7 @@ class BatchMetaDataLoaderdDPP(MetaDataLoader):
 
 
 class dDPP(object):
-    def __init__(self, dataset, batch_size=32, shuffle=True, num_workers=1, pin_memory=True, num_ways=5, dpp_threshold=500):
+    def __init__(self, dataset, batch_size=32, shuffle=True, num_workers=1, pin_memory=True, num_ways=5, dpp_threshold=500, model_name='protonet'):
         self.dataset = dataset
         self.batch_size = batch_size
         self.shuffle = shuffle
@@ -144,44 +144,75 @@ class dDPP(object):
         self.pin_memory = pin_memory
         self.num_ways = num_ways
         self.index = 0
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.dpp_threshold = dpp_threshold
+        self.model_name = model_name
         self.disjoint_dataloader = DisjointMetaDataloader(self.dataset,
                                                           batch_size=256,
                                                           shuffle=False,
-                                                          num_workers=4,
+                                                          num_workers=8,
                                                           pin_memory=True)
-        self.prototypes = {}
         self.model = None
         self.DPP = None
 
     def init_metalearner(self, metalearner):
         self.metalearner = metalearner
-        self.model = self.metalearner.model
 
     def get_task_embedding(self):
-
+        task_embedding = {}
         for batch in self.disjoint_dataloader:
-            train_inputs, train_targets, tasks = batch['train']
             with torch.no_grad():
-                _, train_embeddings = self.model(train_inputs)
-                prototypes = get_prototypes(train_embeddings, train_targets, self.num_ways)
-            for task_id, task in enumerate(tasks):
-                for class_id, index in enumerate(task):
-                    self.prototypes[str(index.item())] = np.array(
-                        prototypes[task_id][class_id].cpu().tolist())
-        return np.array(list(self.prototypes.values()))
+                if self.model_name == 'cnaps':
+                    for task_id, (train_inputs, train_targets, task) \
+                            in enumerate(zip(*batch['train'])):
+                        _, prototypes = self.metalearner.model(
+                            train_inputs.to(device=self.device),
+                            train_targets.to(device=self.device),
+                            train_inputs.to(device=self.device))
+                        for class_id, index in enumerate(task):
+                            task_embedding[str(index.item())] = np.array(
+                                prototypes[class_id].cpu().tolist())
+                elif self.model_name == 'matching_networks':
+                    train_inputs, train_targets, tasks = batch['train']
+                    _, _, train_embeddings = self.metalearner.model(
+                        train_inputs.to(device=self.device))
+                    prototypes = get_prototypes(train_embeddings.to(
+                        device='cpu'), train_targets, self.num_ways)
+                    for task_id, task in enumerate(tasks):
+                        for class_id, index in enumerate(task):
+                            task_embedding[str(index.item())] = np.array(
+                                prototypes[task_id][class_id].cpu().tolist())
+                elif self.model_name in ['maml', 'reptile', 'metaoptnet']:
+                    for task_id, (train_inputs, train_targets, task) \
+                            in enumerate(zip(*batch['train'])):
+                        _, prototypes = self.metalearner.model(
+                            train_inputs.to(device=self.device))
+                        for class_id, index in enumerate(task):
+                            task_embedding[str(index.item())] = np.array(
+                                prototypes[task_id][class_id].cpu().tolist())
+                else:
+                    train_inputs, train_targets, tasks = batch['train']
+                    _, train_embeddings = self.metalearner.model(
+                        train_inputs.to(device=self.device))
+                    prototypes = get_prototypes(train_embeddings.to(
+                        device='cpu'), train_targets, self.num_ways)
+                    for task_id, task in enumerate(tasks):
+                        for class_id, index in enumerate(task):
+                            task_embedding[str(index.item())] = np.array(
+                                prototypes[task_id][class_id].cpu().tolist())
+        return np.array(list(task_embedding.values()))
 
     def get_diverse_tasks(self):
         Phi = self.get_task_embedding()
-        self.DPP = FiniteDPP('likelihood', **{'L': Phi.dot(Phi.T)})
+        return FiniteDPP('likelihood', **{'L': Phi.dot(Phi.T)})
 
     def __iter__(self):
         return self
 
     def __next__(self):
         self.index += 1
-        if self.index % 500 == 0 and self.index >= self.dpp_threshold:
-            self.get_diverse_tasks()
+        if self.index % 500 == 0:
+            self.DPP = self.get_diverse_tasks()
         for batch in BatchMetaDataLoaderdDPP(self.dataset,
                                              batch_size=self.batch_size,
                                              shuffle=self.shuffle,

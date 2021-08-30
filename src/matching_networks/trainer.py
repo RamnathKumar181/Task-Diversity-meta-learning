@@ -79,6 +79,24 @@ class MatchingNetworksTrainer():
                                                   shuffle=True,
                                                   num_workers=self.args.num_workers,
                                                   pin_memory=True)
+        elif self.args.task_sampler == 's-DPP':
+            logging.info("Using Static DPP task sampler:\n\n")
+            from src.datasets.task_sampler import sDPP
+            self.meta_train_dataloader = sDPP(self.benchmark.meta_train_dataset,
+                                              batch_size=self.args.batch_size,
+                                              shuffle=False if self.args.dataset == "meta_dataset" else True,
+                                              num_workers=self.args.num_workers,
+                                              pin_memory=True,
+                                              dataset_name=self.args.dataset)
+        elif self.args.task_sampler == 'd-DPP':
+            logging.info("Using Dynamic DPP task sampler:\n\n")
+            from src.datasets.task_sampler import dDPP
+            self.meta_train_dataloader = dDPP(self.benchmark.meta_train_dataset,
+                                              batch_size=self.args.batch_size,
+                                              shuffle=False if self.args.dataset == "meta_dataset" else True,
+                                              num_workers=self.args.num_workers,
+                                              pin_memory=True,
+                                              model_name=self.args.model)
         elif self.args.task_sampler == 'ohtm':
             logging.info("Using online hardest task mining sampler:\n\n")
             from src.datasets.task_sampler import OHTM
@@ -116,7 +134,7 @@ class MatchingNetworksTrainer():
                                            num_shots=self.args.num_shots,
                                            num_shots_test=self.args.num_shots_test,
                                            ohtm=self.args.task_sampler == 'ohtm')
-        if self.args.task_sampler == 'ohtm':
+        if self.args.task_sampler in ['ohtm', 'd-DPP']:
             self.meta_train_dataloader.init_metalearner(self.metalearner)
 
     def _train(self):

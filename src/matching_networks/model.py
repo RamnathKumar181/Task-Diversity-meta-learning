@@ -185,32 +185,5 @@ class MatchingNetwork(nn.Module):
                                              num_ways)
             test_predictions = torch.argmax(log_probas, dim=1)
             accuracy = (test_predictions == test_targets).float()
-        # # produce embeddings for support set images
-        # support_set_y_one_hot = F.one_hot(support_set_y)
-        # support_images_encoded = self.g(support_set_images)
-        #
-        # # produce embeddings for target images
-        # target_image_encoded = self.g(target_image)
-        #
-        # # use fce?
-        # if self.fce:
-        #     support_images_encoded = self.lstm(support_images_encoded)
-        #     target_image_encoded = self.lstm(target_image_encoded)
-        #
-        # batch_size, embedding = support_images_encoded.size()
-        # # get similarities between support set embeddings and target
-        #
-        # similarity = self.dn(support_images_encoded.unsqueeze(
-        #     0).view(-1, batch_size, embedding), target_image_encoded).squeeze(1)
-        #
-        # # produce predictions for target probabilities
-        # preds = self.classify(
-        #     similarity.squeeze(0), support_set_y=support_set_y_one_hot.float().unsqueeze(0))
-        #
-        # # calculate the accuracy
-        #
-        # values, indices = preds.max(1)
-        # accuracy = torch.mean((indices.squeeze() == target_y).float())
-        # crossentropy_loss = F.cross_entropy(preds, target_y.long())
 
-        return accuracy, loss
+        return accuracy, loss, train_embeddings

@@ -53,7 +53,6 @@ class PrototypicalNetwork(object):
         self.loss_function = loss_function
         self.device = device
         self.num_ways = num_ways
-        self.model.to(device=self.device)
         self.ohtm = ohtm
         if self.ohtm:
             self.hardest_task = OrderedDict()

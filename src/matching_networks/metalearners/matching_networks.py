@@ -105,8 +105,8 @@ class MatchingNetwork(object):
         train_targets = train_targets.to(device=self.device)
         test_inputs = test_inputs.to(device=self.device)
         test_targets = test_targets.to(device=self.device)
-        accuracy, loss = self.model(train_inputs, train_targets,
-                                    test_inputs, test_targets, self.num_ways)
+        accuracy, loss, _ = self.model(train_inputs, train_targets,
+                                       test_inputs, test_targets, self.num_ways)
         loss.backward()
         results['loss'] = loss.item()
         mean_loss += loss

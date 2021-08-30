@@ -104,7 +104,8 @@ class CNAPTrainer():
                                               batch_size=self.args.batch_size,
                                               shuffle=False if self.args.dataset == "meta_dataset" else True,
                                               num_workers=self.args.num_workers,
-                                              pin_memory=True)
+                                              pin_memory=True,
+                                              model_name=self.args.model)
         else:
             logging.info("Using uniform_task sampler:\n\n")
             self.meta_train_dataloader = BMD(self.benchmark.meta_train_dataset,
