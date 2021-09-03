@@ -201,7 +201,7 @@ class dDPP(object):
                             train_inputs.to(device=self.device))
                         for class_id, index in enumerate(task):
                             task_embedding[str(index.item())] = np.array(
-                                prototypes[task_id][class_id].cpu().tolist())
+                                prototypes[class_id].cpu().tolist())
                 else:
                     train_inputs, train_targets, tasks = batch['train']
                     _, train_embeddings = self.metalearner.model(

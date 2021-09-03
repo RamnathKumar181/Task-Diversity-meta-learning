@@ -5,7 +5,6 @@ import numpy as np
 import os
 from collections import namedtuple, OrderedDict
 from src.datasets import Omniglot, MiniImagenet
-from torchmeta.toy import Sinusoid
 from torchmeta.transforms import ClassSplitter, Categorical, Rotation
 from torchvision.transforms import ToTensor, Resize, Compose
 from torchvision import transforms
@@ -186,7 +185,6 @@ def get_benchmark_by_name(model_name,
                                num_ways, num_shots, num_shots_test)
             loss_function = torch.nn.NLLLoss
     elif name == 'miniimagenet':
-        print("Using miniimagenet for sure")
         transform = []
         if use_augmentations:
             transform.append(transforms.RandomCrop(image_size, padding=8))

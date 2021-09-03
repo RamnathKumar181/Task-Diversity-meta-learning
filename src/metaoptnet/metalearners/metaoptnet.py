@@ -98,6 +98,7 @@ class MetaOptNet(object):
             })
 
         mean_loss = torch.tensor(0., device=self.device)
+
         for task_id, (train_inputs, train_targets, task, test_inputs, test_targets, _) \
                 in enumerate(zip(*batch['train'], *batch['test'])):
             train_inputs = train_inputs.to(device=self.device)
@@ -111,6 +112,7 @@ class MetaOptNet(object):
 
             if is_classification_task:
                 results['accuracies'][task_id] = accuracy
+
             if self.ohtm and train:
                 self.hardest_task[str(task.cpu().tolist())] = results['accuracies'][task_id]
 

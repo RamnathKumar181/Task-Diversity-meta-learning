@@ -60,7 +60,7 @@ class MetaOptNet(nn.Module):
         self.train_n_query = train_way * train_query
         self.train_way = train_way
         self.train_shot = train_shot
-        self.eps = 0.1
+        self.eps = 0.0
 
     def forward(self, support_set_images, support_set_y, target_image, target_y):
         """
