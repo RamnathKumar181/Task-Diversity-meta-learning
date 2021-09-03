@@ -53,7 +53,7 @@ def get_dataloader(path,
                    episodic: bool,
                    num_ways, num_shots, num_shots_test):
     dataset_spec, data_config, episod_config = get_dataspecs(
-        path, num_ways, num_shots, num_shots_test)
+        path, num_ways, num_shots, num_shots_test, source)
     num_classes = len(dataset_spec.get_classes(split=split))
 
     pipeline_fn: Callable[..., Dataset]
