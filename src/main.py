@@ -79,7 +79,7 @@ def parse_args():
                         help='Use the first order approximation,'
                         ' do not use higher-order derivatives during '
                         'meta-optimization.')
-    parser.add_argument('--meta-lr', type=float, default=0.001,
+    parser.add_argument('--meta-lr', type=float, default=0.2,
                         help='Learning rate for the meta-optimizer '
                         '(optimization of the outer loss). The default '
                         'optimizer is Adam (default: 1e-3).')

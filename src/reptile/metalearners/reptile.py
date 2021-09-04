@@ -46,7 +46,7 @@ class Reptile(object):
     def __init__(self, model, optimizer=None, step_size=0.1, outer_step_size=0.001, first_order=False,
                  learn_step_size=False, per_param_step_size=False,
                  num_adaptation_steps=1, scheduler=None,
-                 loss_function=torch.nn.NLLLoss, device=None, meta_lr=1, meta_lr_final=0, lr=0.001, ohtm=False):
+                 loss_function=torch.nn.CrossEntropyLoss, device=None, meta_lr=0.1, meta_lr_final=0, lr=0.001, ohtm=False):
         self.model = model.to(device=device)
         self.optimizer = optimizer
         self.step_size = step_size
@@ -59,7 +59,6 @@ class Reptile(object):
         self.loss_function = loss_function
         self.device = device
         self.outer_step_size = outer_step_size
-        self.model.to(device=self.device)
         self.meta_iteration = 0
         self.ohtm = ohtm
         if self.ohtm:
@@ -141,10 +140,9 @@ class Reptile(object):
             results['inner_losses'][step] = inner_loss.item()
             if (step == 0) and is_classification_task:
                 results['accuracy_before'] = compute_accuracy(logits, targets)
-            if train:
-                self.optimizer.zero_grad()
-                inner_loss.backward()
-                self.optimizer.step()
+            self.optimizer.zero_grad()
+            inner_loss.backward()
+            self.optimizer.step()
         return results
 
     def train(self, dataloader, max_batches=500, verbose=True, **kwargs):
@@ -162,7 +160,7 @@ class Reptile(object):
         weights_original = deepcopy(self.model.state_dict())
         new_weights = []
         self.model.train()
-        frac_done = self.meta_iteration/100
+        frac_done = self.meta_iteration/(500*100)
         cur_meta_step_size = frac_done*self.meta_lr_final + (1-frac_done)*self.meta_lr
         print(cur_meta_step_size)
         while num_batches < max_batches:
