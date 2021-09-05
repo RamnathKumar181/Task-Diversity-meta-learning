@@ -126,8 +126,11 @@ def no_collate(batch):
 
 class BatchMetaDataLoaderdDPP(MetaDataLoader):
     def __init__(self, dataset, batch_size=1, shuffle=True, sampler=None, num_workers=0,
-                 pin_memory=False, drop_last=False, timeout=0, worker_init_fn=None, DPP=None):
-        collate_fn = BatchMetaCollate(default_collate)
+                 pin_memory=False, drop_last=False, timeout=0, worker_init_fn=None, DPP=None, use_batch_collate=True):
+        if use_batch_collate:
+            collate_fn = BatchMetaCollate(default_collate)
+        else:
+            collate_fn = None
 
         super(BatchMetaDataLoaderdDPP, self).__init__(dataset,
                                                       batch_size=batch_size, shuffle=shuffle, sampler=sampler, num_workers=num_workers,
@@ -136,7 +139,8 @@ class BatchMetaDataLoaderdDPP(MetaDataLoader):
 
 
 class dDPP(object):
-    def __init__(self, dataset, batch_size=32, shuffle=True, num_workers=1, pin_memory=True, num_ways=5, dpp_threshold=500, model_name='protonet'):
+    def __init__(self, dataset, batch_size=32, shuffle=True, num_workers=1, pin_memory=True, num_ways=5,
+                 dpp_threshold=500, model_name='protonet', use_batch_collate=True):
         self.dataset = dataset
         self.batch_size = batch_size
         self.shuffle = shuffle
@@ -147,11 +151,13 @@ class dDPP(object):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.dpp_threshold = dpp_threshold
         self.model_name = model_name
+        self.use_batch_collate = use_batch_collate
         self.disjoint_dataloader = DisjointMetaDataloader(self.dataset,
                                                           batch_size=256,
                                                           shuffle=False,
                                                           num_workers=8,
-                                                          pin_memory=True)
+                                                          pin_memory=True,
+                                                          use_batch_collate=True)
         self.model = None
         self.DPP = None
 
@@ -229,6 +235,6 @@ class dDPP(object):
                                              batch_size=self.batch_size,
                                              shuffle=self.shuffle,
                                              num_workers=self.num_workers,
-                                             pin_memory=self.pin_memory, DPP=self.DPP):
+                                             pin_memory=self.pin_memory, DPP=self.DPP, use_batch_collate=self.use_batch_collate):
             return batch
             break

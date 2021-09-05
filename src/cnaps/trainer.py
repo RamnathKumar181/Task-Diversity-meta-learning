@@ -4,7 +4,7 @@ import os
 import logging
 import torch
 from src.cnaps.metalearners import CNAPs
-from torchmeta.utils.data import BatchMetaDataLoader as BMD
+from src.datasets.task_sampler import BatchMetaDataLoader as BMD
 from src.utils import get_benchmark_by_name
 from src.cnaps.model import TaskNormI
 import wandb
@@ -55,31 +55,35 @@ class CNAPTrainer():
                                                self.args.num_shots_test,
                                                self.args.image_size,
                                                hidden_size=self.args.hidden_size,
-                                               use_augmentations=self.args.use_augmentations)
+                                               use_augmentations=self.args.use_augmentations,
+                                               sub_dataset_name=self.args.sub_dataset)
         if self.args.task_sampler == 'no_diversity_task':
             logging.info("Using no_diversity_task sampler:\n\n")
             from src.datasets.task_sampler import BatchMetaDataLoaderNDT as BMD_NDT
             self.meta_train_dataloader = BMD_NDT(self.benchmark.meta_train_dataset,
                                                  batch_size=self.args.batch_size,
-                                                 shuffle=False if self.args.dataset == 'meta_dataset' else True,
+                                                 shuffle=True,
                                                  num_workers=self.args.num_workers,
-                                                 pin_memory=True)
+                                                 pin_memory=True,
+                                                 use_batch_collate=self.args.dataset != 'meta_dataset')
         elif self.args.task_sampler == 'no_diversity_batch':
             logging.info("Using no_diversity_batch sampler:\n\n")
             from src.datasets.task_sampler import BatchMetaDataLoaderNDB as BMD_NDB
             self.meta_train_dataloader = BMD_NDB(self.benchmark.meta_train_dataset,
                                                  batch_size=self.args.batch_size,
-                                                 shuffle=False if self.args.dataset == 'meta_dataset' else True,
+                                                 shuffle=True,
                                                  num_workers=self.args.num_workers,
-                                                 pin_memory=True)
+                                                 pin_memory=True,
+                                                 use_batch_collate=self.args.dataset != 'meta_dataset')
         elif self.args.task_sampler == 'no_diversity_tasks_per_batch':
             logging.info("Using no_diversity_tasks_per_batch sampler:\n\n")
             from src.datasets.task_sampler import BatchMetaDataLoaderNDTB as BMD_NDTB
             self.meta_train_dataloader = BMD_NDTB(self.benchmark.meta_train_dataset,
                                                   batch_size=self.args.batch_size,
-                                                  shuffle=False if self.args.dataset == 'meta_dataset' else True,
+                                                  shuffle=True,
                                                   num_workers=self.args.num_workers,
-                                                  pin_memory=True)
+                                                  pin_memory=True,
+                                                  use_batch_collate=self.args.dataset != 'meta_dataset')
         elif self.args.task_sampler == 'ohtm':
             logging.info("Using online hardest task mining sampler:\n\n")
             from src.datasets.task_sampler import OHTM
@@ -87,37 +91,41 @@ class CNAPTrainer():
                                               batch_size=self.args.batch_size,
                                               shuffle=True,
                                               num_workers=self.args.num_workers,
-                                              pin_memory=True)
+                                              pin_memory=True,
+                                              use_batch_collate=self.args.dataset != 'meta_dataset')
         elif self.args.task_sampler == 's-DPP':
             logging.info("Using Static DPP task sampler:\n\n")
             from src.datasets.task_sampler import sDPP
             self.meta_train_dataloader = sDPP(self.benchmark.meta_train_dataset,
                                               batch_size=self.args.batch_size,
-                                              shuffle=False if self.args.dataset == "meta_dataset" else True,
+                                              shuffle=True,
                                               num_workers=self.args.num_workers,
                                               pin_memory=True,
-                                              dataset_name=self.args.dataset)
+                                              use_batch_collate=self.args.dataset != 'meta_dataset')
         elif self.args.task_sampler == 'd-DPP':
             logging.info("Using Dynamic DPP task sampler:\n\n")
             from src.datasets.task_sampler import dDPP
             self.meta_train_dataloader = dDPP(self.benchmark.meta_train_dataset,
                                               batch_size=self.args.batch_size,
-                                              shuffle=False if self.args.dataset == "meta_dataset" else True,
+                                              shuffle=True,
                                               num_workers=self.args.num_workers,
                                               pin_memory=True,
-                                              model_name=self.args.model)
+                                              model_name=self.args.model,
+                                              use_batch_collate=self.args.dataset != 'meta_dataset')
         else:
             logging.info("Using uniform_task sampler:\n\n")
             self.meta_train_dataloader = BMD(self.benchmark.meta_train_dataset,
                                              batch_size=self.args.batch_size,
                                              shuffle=True,
                                              num_workers=self.args.num_workers,
-                                             pin_memory=True)
+                                             pin_memory=True,
+                                             use_batch_collate=self.args.dataset != 'meta_dataset')
         self.meta_val_dataloader = BMD(self.benchmark.meta_val_dataset,
                                        batch_size=self.args.batch_size,
                                        shuffle=True,
                                        num_workers=self.args.num_workers,
-                                       pin_memory=True)
+                                       pin_memory=True,
+                                       use_batch_collate=self.args.dataset != 'meta_dataset')
 
         self.register_extra_parameters(self.benchmark.model)
         self.benchmark.model.train()

@@ -4,17 +4,15 @@ import random
 import numpy as np
 import os
 from collections import namedtuple, OrderedDict
-from src.datasets import Omniglot, MiniImagenet
+from src.datasets import Omniglot, MiniImagenet, MetaDataset, SingleMetaDataset
 from torchmeta.transforms import ClassSplitter, Categorical, Rotation
 from torchvision.transforms import ToTensor, Resize, Compose
 from torchvision import transforms
 
 from pathlib import Path
-from typing import Any, Tuple, cast, Callable
+from typing import Any, Tuple
 from src.datasets.meta_dataset import config as config_lib
-from src.datasets.meta_dataset import pipeline as torch_pipeline
 from src.datasets.meta_dataset import dataset_spec as dataset_spec_lib
-from src.datasets.meta_dataset.utils import Split
 
 
 Benchmark = namedtuple('Benchmark', 'meta_train_dataset meta_val_dataset '
@@ -104,7 +102,8 @@ def get_benchmark_by_name(model_name,
                           test_dataset=None,
                           metaoptnet_embedding='ResNet',
                           metaoptnet_head='SVM-CS',
-                          use_augmentations=False):
+                          use_augmentations=False,
+                          sub_dataset_name=None):
     """Get dataset, model and loss function"""
     from src.maml.model import ModelConvOmniglot, ModelConvMiniImagenet
     from src.reptile.model import ModelConvOmniglot as ModelConvOmniglotReptile
@@ -169,7 +168,7 @@ def get_benchmark_by_name(model_name,
             loss_function = F.cross_entropy
         elif model_name == 'reptile':
             model = ModelConvOmniglotReptile(num_ways, hidden_size=hidden_size)
-            loss_function = F.cross_entropy
+            loss_function = torch.nn.CrossEntropyLoss()
         elif model_name == 'protonet':
             model = Protonet_Omniglot()
             loss_function = prototypical_loss
@@ -244,34 +243,49 @@ def get_benchmark_by_name(model_name,
                                num_ways, num_shots, num_shots_test)
             loss_function = torch.nn.NLLLoss
     elif name == 'meta_dataset':
-        transform = []
-        if use_augmentations:
-            transform.append(transforms.RandomCrop(image_size, padding=8))
-            transform.append(transforms.ColorJitter(
-                brightness=0.4, contrast=0.4, saturation=0.4))
-            transform.append(transforms.RandomHorizontalFlip())
 
-        transform.append(Resize(image_size))
-        transform.append(ToTensor())
-        transform = Compose(transform)
-        dataset_spec, data_config, episod_config = get_dataspecs(
-            folder, num_ways, num_shots, num_shots_test)
-        pipeline_fn: Callable[..., torch.utils.data.Dataset]
-        pipeline_fn = cast(Callable[..., torch.utils.data.Dataset],
-                           torch_pipeline.make_batch_pipeline)
+        meta_train_dataset = MetaDataset(folder, source='ilsvrc_2012',
+                                         num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,
+                                         meta_train=True)
+        meta_val_dataset = MetaDataset(folder, source='ilsvrc_2012',
+                                       num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,
+                                       meta_val=True)
+        meta_test_dataset = MetaDataset(folder, source='ilsvrc_2012',
+                                        num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,
+                                        meta_test=True)
 
-        meta_train_dataset: torch.utils.data.Dataset = pipeline_fn(dataset_spec=dataset_spec,
-                                                                   data_config=data_config,
-                                                                   split=Split["TRAIN"],
-                                                                   episode_descr_config=episod_config)
-        meta_val_dataset: torch.utils.data.Dataset = pipeline_fn(dataset_spec=dataset_spec,
-                                                                 data_config=data_config,
-                                                                 split=Split["VALID"],
-                                                                 episode_descr_config=episod_config)
-        meta_test_dataset: torch.utils.data.Dataset = pipeline_fn(dataset_spec=dataset_spec,
-                                                                  data_config=data_config,
-                                                                  split=Split["TEST"],
-                                                                  episode_descr_config=episod_config)
+        if model_name == 'maml':
+            model = ModelConvMiniImagenet(num_ways, hidden_size=hidden_size)
+            loss_function = F.cross_entropy
+        elif model_name == 'reptile':
+            model = ModelConvMiniImagenetReptile(num_ways, hidden_size=hidden_size)
+            loss_function = F.cross_entropy
+        elif model_name == 'protonet':
+            model = Protonet_MiniImagenet()
+            loss_function = prototypical_loss
+        elif model_name == 'matching_networks':
+            model = MatchingNetwork(keep_prob=0, batch_size=32, num_channels=3, fce=False, num_classes_per_set=num_ways,
+                                    num_samples_per_class=num_shots, image_size=84)
+            loss_function = torch.nn.NLLLoss
+        elif model_name == 'cnaps':
+            model = Cnaps()
+            loss_function = CNAPsLoss
+        elif model_name == 'metaoptnet':
+            model = MetaOptNet(name, metaoptnet_embedding, metaoptnet_head,
+                               num_ways, num_shots, num_shots_test)
+            loss_function = torch.nn.NLLLoss
+    elif name == 'single_meta_dataset':
+
+        meta_train_dataset = SingleMetaDataset(folder, source='ilsvrc_2012',
+                                               num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,
+                                               meta_train=True)
+        meta_val_dataset = SingleMetaDataset(folder, source='ilsvrc_2012',
+                                             num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,
+                                             meta_val=True)
+        meta_test_dataset = SingleMetaDataset(folder, source='ilsvrc_2012',
+                                              num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,
+                                              meta_test=True)
+
         if model_name == 'maml':
             model = ModelConvMiniImagenet(num_ways, hidden_size=hidden_size)
             loss_function = F.cross_entropy

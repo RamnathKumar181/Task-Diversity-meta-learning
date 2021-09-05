@@ -11,7 +11,7 @@ from src.datasets.meta_dataset.pipeline import cycle_, parse_record
 from src.datasets.meta_dataset.transform import get_transforms
 
 
-class MetaDataset(CombinationMetaDataset):
+class SingleMetaDataset(CombinationMetaDataset):
     def __init__(
         self,
         root,
@@ -28,7 +28,7 @@ class MetaDataset(CombinationMetaDataset):
         self.num_shots = num_shots
         self.num_shots_test = num_shots_test
 
-        dataset = MetaDatasetClassDataset(
+        dataset = SingleMetaDatasetClassDataset(
             root,
             source,
             num_ways,
@@ -82,7 +82,7 @@ class MetaDataset(CombinationMetaDataset):
         ])
 
 
-class MetaDatasetClassDataset(ClassDataset):
+class SingleMetaDatasetClassDataset(ClassDataset):
     def __init__(
         self,
         root,
@@ -95,7 +95,7 @@ class MetaDatasetClassDataset(ClassDataset):
         meta_test=False,
         meta_split=None
     ):
-        self.root = os.path.expanduser(root)
+        self.root = os.path.expanduser(os.path.join(root, source))
         self.source = source
         super().__init__(
             meta_train=meta_train,

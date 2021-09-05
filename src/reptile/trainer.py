@@ -1,12 +1,12 @@
-import json
-import time
-import os
-import logging
-import torch
-from src.reptile.metalearners import Reptile
-from src.utils import get_benchmark_by_name
-from torchmeta.utils.data import BatchMetaDataLoader as BMD
 import wandb
+from torchmeta.utils.data import BatchMetaDataLoader as BMD
+from src.utils import get_benchmark_by_name
+from src.reptile.metalearners import Reptile
+import torch
+import logging
+import os
+import time
+import json
 
 
 class ReptileTrainer():
@@ -17,6 +17,7 @@ class ReptileTrainer():
         logging.basicConfig(level=logging.DEBUG if self.args.verbose else logging.INFO)
         logging.info(f"Configuration while training: {args}")
         self._build()
+        self.meta_iteration = 0
 
     def _build(self):
         self._create_config_file()
@@ -53,11 +54,10 @@ class ReptileTrainer():
                                                self.args.num_shots,
                                                self.args.num_shots_test,
                                                self.args.image_size,
-                                               hidden_size=self.args.hidden_size,
-                                               use_augmentations=self.args.use_augmentations)
+                                               hidden_size=self.args.hidden_size)
         if self.args.task_sampler == 'no_diversity_task':
             logging.info("Using no_diversity_task sampler:\n\n")
-            from src.datasets.task_sampler import BatchMetaDataLoaderNDT as BMD_NDT
+            from src.task_sampler import BatchMetaDataLoaderNDT as BMD_NDT
             self.meta_train_dataloader = BMD_NDT(self.benchmark.meta_train_dataset,
                                                  batch_size=self.args.batch_size,
                                                  shuffle=True,
@@ -65,7 +65,7 @@ class ReptileTrainer():
                                                  pin_memory=True)
         elif self.args.task_sampler == 'no_diversity_batch':
             logging.info("Using no_diversity_batch sampler:\n\n")
-            from src.datasets.task_sampler import BatchMetaDataLoaderNDB as BMD_NDB
+            from src.task_sampler import BatchMetaDataLoaderNDB as BMD_NDB
             self.meta_train_dataloader = BMD_NDB(self.benchmark.meta_train_dataset,
                                                  batch_size=self.args.batch_size,
                                                  shuffle=True,
@@ -73,20 +73,12 @@ class ReptileTrainer():
                                                  pin_memory=True)
         elif self.args.task_sampler == 'no_diversity_tasks_per_batch':
             logging.info("Using no_diversity_tasks_per_batch sampler:\n\n")
-            from src.datasets.task_sampler import BatchMetaDataLoaderNDTB as BMD_NDTB
+            from src.task_sampler import BatchMetaDataLoaderNDTB as BMD_NDTB
             self.meta_train_dataloader = BMD_NDTB(self.benchmark.meta_train_dataset,
                                                   batch_size=self.args.batch_size,
                                                   shuffle=True,
                                                   num_workers=self.args.num_workers,
                                                   pin_memory=True)
-        elif self.args.task_sampler == 'ohtm':
-            logging.info("Using online hardest task mining sampler:\n\n")
-            from src.datasets.task_sampler import OHTM
-            self.meta_train_dataloader = OHTM(self.benchmark.meta_train_dataset,
-                                              batch_size=self.args.batch_size,
-                                              shuffle=True,
-                                              num_workers=self.args.num_workers,
-                                              pin_memory=True)
         else:
             logging.info("Using uniform_task sampler:\n\n")
             self.meta_train_dataloader = BMD(self.benchmark.meta_train_dataset,
@@ -100,31 +92,41 @@ class ReptileTrainer():
                                        num_workers=self.args.num_workers,
                                        pin_memory=True)
 
-        self.optimizer = torch.optim.Adam(
-            self.benchmark.model.parameters(), lr=self.args.lr, betas=(0, 0.999))
-
+        self.optimizer = torch.optim.Adam(self.benchmark.model.parameters(),
+                                          lr=self.args.lr, betas=(0, 0.999))
+        self.meta_optimizer = torch.optim.SGD(self.benchmark.model.parameters(),
+                                              lr=self.args.meta_lr)
         wandb.watch(self.benchmark.model)
 
     def _build_metalearner(self):
 
         self.metalearner = Reptile(self.benchmark.model,
-                                   optimizer=self.optimizer,
+                                   self.optimizer,
                                    num_adaptation_steps=self.args.num_steps,
                                    step_size=self.args.step_size,
                                    outer_step_size=self.args.lr,
                                    loss_function=self.benchmark.loss_function,
-                                   device=self.device,
-                                   ohtm=self.args.task_sampler == 'ohtm')
-        if self.args.task_sampler == 'ohtm':
-            self.meta_train_dataloader.init_metalearner(self.metalearner)
+                                   lr=self.args.lr,
+                                   meta_lr=self.args.meta_lr,
+                                   device=self.device)
+
+    def set_learning_rate(self, optimizer, lr):
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = lr
 
     def _train(self):
         best_value = None
         for epoch in range(self.args.num_epochs):
+            frac_done = float(epoch) / self.args.num_epochs
+            current_step_size = self.args.meta_lr * (1. - frac_done)
             self.metalearner.train(self.meta_train_dataloader,
+                                   max_batches=self.args.num_batches,
+                                   meta_lr=current_step_size,
                                    verbose=self.args.verbose,
-                                   desc='Training')
+                                   desc='Training',
+                                   leave=False)
             results = self.metalearner.evaluate(self.meta_val_dataloader,
+                                                max_batches=self.args.num_batches,
                                                 verbose=self.args.verbose,
                                                 desc='Validation')
             if (epoch+1) % self.args.log_interval == 0:
@@ -175,10 +177,7 @@ class ReptileTester():
                                                self.config['num_ways'],
                                                self.config['num_shots'],
                                                self.config['num_shots_test'],
-                                               image_size=self.config['image_size'],
-                                               hidden_size=self.config['hidden_size'],
-                                               use_augmentations=self.config['use_augmentations'],
-                                               test_dataset=self.config['dataset_test'])
+                                               hidden_size=self.config['hidden_size'])
 
         self.meta_test_dataloader = BMD(self.benchmark.meta_test_dataset,
                                         batch_size=self.config['batch_size'],

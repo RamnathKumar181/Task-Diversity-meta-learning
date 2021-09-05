@@ -1,8 +1,8 @@
-import torch
-import numpy as np
-from tqdm import tqdm
-from collections import OrderedDict
 from src.utils import compute_accuracy, tensors_to_device
+from collections import OrderedDict
+from tqdm import tqdm
+import numpy as np
+import torch
 from copy import deepcopy
 
 
@@ -46,23 +46,21 @@ class Reptile(object):
     def __init__(self, model, optimizer=None, step_size=0.1, outer_step_size=0.001, first_order=False,
                  learn_step_size=False, per_param_step_size=False,
                  num_adaptation_steps=1, scheduler=None,
-                 loss_function=torch.nn.CrossEntropyLoss, device=None, meta_lr=0.1, meta_lr_final=0, lr=0.001, ohtm=False):
+                 loss_function=torch.nn.NLLLoss, device=None, lr=0.001, meta_lr=0.001, ohtm=False):
         self.model = model.to(device=device)
         self.optimizer = optimizer
         self.step_size = step_size
-        self.meta_lr = meta_lr
-        self.meta_lr_final = meta_lr_final
         self.lr = lr
+        self.meta_lr = meta_lr
         self.first_order = first_order
         self.num_adaptation_steps = num_adaptation_steps
         self.scheduler = scheduler
         self.loss_function = loss_function
         self.device = device
-        self.outer_step_size = outer_step_size
-        self.meta_iteration = 0
         self.ohtm = ohtm
         if self.ohtm:
             self.hardest_task = OrderedDict()
+        self.outer_step_size = outer_step_size
         if per_param_step_size:
             self.step_size = OrderedDict((name, torch.tensor(step_size,
                                                              dtype=param.dtype, device=self.device,
@@ -81,7 +79,7 @@ class Reptile(object):
                 self.scheduler.base_lrs([group['initial_lr']
                                          for group in self.optimizer.param_groups])
 
-    def get_outer_loss(self, batch, train=False, cur_meta_step_size=0.01):
+    def get_outer_loss(self, batch, train=False):
         if 'test' not in batch:
             raise RuntimeError('The batch does not contain any test dataset.')
 
@@ -101,14 +99,14 @@ class Reptile(object):
                 'accuracies_after': np.zeros((num_tasks,), dtype=np.float32)
             })
 
-        for task_id, (train_inputs, train_targets, task, test_inputs, test_targets, _) in enumerate(zip(*batch['train'], *batch['test'])):
+        for task_id, (train_inputs, train_targets, task, test_inputs, test_targets, _) \
+                in enumerate(zip(*batch['train'], *batch['test'])):
             train_inputs = train_inputs.to(device=self.device)
             train_targets = train_targets.to(device=self.device)
             adaptation_results = self.adapt(train_inputs, train_targets,
                                             is_classification_task=is_classification_task,
                                             num_adaptation_steps=self.num_adaptation_steps,
-                                            step_size=self.step_size, train=train)
-
+                                            step_size=self.step_size)
             results['inner_losses'][:, task_id] = adaptation_results['inner_losses']
             if is_classification_task:
                 results['accuracies_before'][task_id] = adaptation_results['accuracy_before']
@@ -119,35 +117,35 @@ class Reptile(object):
             if is_classification_task:
                 results['accuracies_after'][task_id] = compute_accuracy(
                     test_logits, test_targets)
-
-        if self.ohtm and train:
-            self.hardest_task[str(task.cpu().tolist())
-                              ] = results['accuracies_after'][task_id]
+            if self.ohtm and train:
+                self.hardest_task[str(task.cpu().tolist())] = results['accuracies_after'][task_id]
         results['mean_outer_loss'] = 0
         return 0, results
 
     def adapt(self, inputs, targets, is_classification_task=None,
-              num_adaptation_steps=1, step_size=0.1, train=False):
-
-        self.model.train()
+              num_adaptation_steps=5, step_size=0.1):
         if is_classification_task is None:
             is_classification_task = (not targets.dtype.is_floating_point)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr, betas=(0, 0.999))
         results = {'inner_losses': np.zeros(
             (num_adaptation_steps,), dtype=np.float32)}
+
         for step in range(num_adaptation_steps):
             logits = self.model(inputs)
             inner_loss = self.loss_function(logits, targets)
             results['inner_losses'][step] = inner_loss.item()
+
             if (step == 0) and is_classification_task:
                 results['accuracy_before'] = compute_accuracy(logits, targets)
-            self.optimizer.zero_grad()
+
+            self.model.zero_grad()
             inner_loss.backward()
             self.optimizer.step()
         return results
 
-    def train(self, dataloader, max_batches=500, verbose=True, **kwargs):
+    def train(self, dataloader, max_batches=500, meta_lr=0.001, verbose=True, **kwargs):
         with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
-            for results in self.train_iter(dataloader, max_batches=max_batches):
+            for results in self.train_iter(dataloader, max_batches=max_batches, meta_lr=meta_lr):
                 pbar.update(1)
                 postfix = {'loss': 'NaN'}
                 if 'accuracies_after' in results:
@@ -155,37 +153,39 @@ class Reptile(object):
                         np.mean(results['accuracies_after']))
                 pbar.set_postfix(**postfix)
 
-    def train_iter(self, dataloader, max_batches=500):
+    def train_iter(self, dataloader, max_batches=500, meta_lr=0.001):
+        if self.optimizer is None:
+            raise RuntimeError('Trying to call `train_iter`, while the '
+                               'optimizer is `None`. In order to train `{0}`, you must '
+                               'specify a Pytorch optimizer as the argument of `{0}` '
+                               '(eg. `{0}(model, optimizer=torch.optim.SGD(model.'
+                               'parameters(), lr=0.01), ...).'.format(__class__.__name__))
         num_batches = 0
+        self.model.train()
         weights_original = deepcopy(self.model.state_dict())
         new_weights = []
-        self.model.train()
-        frac_done = self.meta_iteration/(500*100)
-        cur_meta_step_size = frac_done*self.meta_lr_final + (1-frac_done)*self.meta_lr
-        print(cur_meta_step_size)
         while num_batches < max_batches:
             for batch in dataloader:
                 if num_batches >= max_batches:
                     break
+
                 batch = tensors_to_device(batch, device=self.device)
-                outer_loss, results = self.get_outer_loss(batch, True, cur_meta_step_size)
-                if self.scheduler is not None:
-                    self.scheduler.step(epoch=num_batches)
-                yield results
+                outer_loss, results = self.get_outer_loss(batch, train=True)
                 new_weights.append(deepcopy(self.model.state_dict()))
                 self.model.load_state_dict(
                     {name: weights_original[name] for name in weights_original})
+                yield results
                 num_batches += 1
         ws = len(new_weights)
         fweights = {name: new_weights[0][name]/float(ws) for name in new_weights[0]}
         for i in range(1, ws):
             for name in new_weights[i]:
                 fweights[name] += new_weights[i][name]/float(ws)
-        self.model.load_state_dict({name: weights_original[name] + (
-            (fweights[name]-weights_original[name])*cur_meta_step_size) for name in weights_original})
-        self.meta_iteration += 1
 
-    def evaluate(self, dataloader, max_batches=500, verbose=True, **kwargs):
+        self.model.load_state_dict({name:
+                                    weights_original[name] + ((fweights[name] - weights_original[name]) * meta_lr) for name in weights_original})
+
+    def evaluate(self, dataloader, max_batches=100, verbose=True, **kwargs):
         mean_outer_loss, mean_accuracy, count = 0., 0., 0
         with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
             for results in self.evaluate_iter(dataloader, max_batches=max_batches):
@@ -207,6 +207,7 @@ class Reptile(object):
     def evaluate_iter(self, dataloader, max_batches=500):
         num_batches = 0
         self.model.eval()
+        weights_original = deepcopy(self.model.state_dict())
         while num_batches < max_batches:
             for batch in dataloader:
                 if num_batches >= max_batches:
@@ -216,3 +217,4 @@ class Reptile(object):
                 yield results
 
                 num_batches += 1
+        self.model.load_state_dict({name: weights_original[name] for name in weights_original})

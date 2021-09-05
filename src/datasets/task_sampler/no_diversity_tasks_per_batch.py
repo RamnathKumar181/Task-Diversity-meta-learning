@@ -80,8 +80,11 @@ class MetaDataLoader(DataLoader):
 
 class BatchMetaDataLoaderNDTB(MetaDataLoader):
     def __init__(self, dataset, batch_size=1, shuffle=True, sampler=None, num_workers=0,
-                 pin_memory=False, drop_last=False, timeout=0, worker_init_fn=None, batch_sampler=None):
-        collate_fn = BatchMetaCollate(default_collate)
+                 pin_memory=False, drop_last=False, timeout=0, worker_init_fn=None, batch_sampler=None, use_batch_collate=True):
+        if use_batch_collate:
+            collate_fn = BatchMetaCollate(default_collate)
+        else:
+            collate_fn = None
 
         super(BatchMetaDataLoaderNDTB, self).__init__(dataset,
                                                       batch_size=batch_size, shuffle=shuffle, sampler=sampler,

@@ -1,18 +1,29 @@
 import torch.nn as nn
+import torch
+from torch.autograd import Variable
 
 from collections import OrderedDict
 from torchmeta.modules import (MetaModule, MetaConv2d,
                                MetaSequential, MetaLinear)
 
 
-def conv_block(in_channels, out_channels, **kwargs):
-    return MetaSequential(OrderedDict([
-        ('conv', MetaConv2d(in_channels, out_channels, **kwargs)),
-        ('norm', nn.BatchNorm2d(out_channels, momentum=1.,
-                                track_running_stats=False)),
-        ('relu', nn.ReLU()),
-        ('pool', nn.MaxPool2d(2))
-    ]))
+def conv_block(in_channels, out_channels, max_pool=False, **kwargs):
+    if max_pool:
+        return MetaSequential(OrderedDict([
+            ('conv', MetaConv2d(in_channels, out_channels, **kwargs)),
+            ('norm', nn.BatchNorm2d(out_channels, momentum=1.,
+                                    track_running_stats=False)),
+            ('pool', nn.MaxPool2d(kernel_size=2)),
+            ('relu', nn.ReLU())
+        ]))
+
+    else:
+        return MetaSequential(OrderedDict([
+            ('conv', MetaConv2d(in_channels, out_channels, **kwargs)),
+            ('norm', nn.BatchNorm2d(out_channels, momentum=1.,
+                                    track_running_stats=False)),
+            ('relu', nn.ReLU())
+        ]))
 
 
 class MetaConvModel(nn.Module):
@@ -36,24 +47,52 @@ class MetaConvModel(nn.Module):
     """
 
     def __init__(self, in_channels, out_features,
-                 hidden_size=64, feature_size=64):
+                 hidden_size=64, feature_size=64, use_max_pool=False):
         super(MetaConvModel, self).__init__()
         self.in_channels = in_channels
         self.out_features = out_features
         self.hidden_size = hidden_size
         self.feature_size = feature_size
+        if use_max_pool:
+            self.features = MetaSequential(OrderedDict([
+                ('layer1', conv_block(in_channels, hidden_size, max_pool=use_max_pool, kernel_size=3,
+                                      stride=2, padding=1, bias=True)),
+                ('layer2', conv_block(hidden_size, hidden_size, max_pool=use_max_pool, kernel_size=3,
+                                      stride=2, padding=1, bias=True)),
+                ('layer3', conv_block(hidden_size, hidden_size, max_pool=use_max_pool, kernel_size=3,
+                                      stride=2, padding=1, bias=True)),
+                ('layer4', conv_block(hidden_size, hidden_size, max_pool=use_max_pool, kernel_size=3,
+                                      stride=2, padding=1, bias=True))
+            ]))
+        else:
+            self.features = nn.Sequential(
+                # 28 x 28 - 1
+                nn.Conv2d(1, 64, 3, 2, 1),
+                nn.BatchNorm2d(64),
+                nn.ReLU(True),
 
-        self.features = MetaSequential(OrderedDict([
-            ('layer1', conv_block(in_channels, hidden_size, kernel_size=3,
-                                  stride=1, padding=1, bias=True)),
-            ('layer2', conv_block(hidden_size, hidden_size, kernel_size=3,
-                                  stride=1, padding=1, bias=True)),
-            ('layer3', conv_block(hidden_size, hidden_size, kernel_size=3,
-                                  stride=1, padding=1, bias=True)),
-            ('layer4', conv_block(hidden_size, hidden_size, kernel_size=3,
-                                  stride=1, padding=1, bias=True))
-        ]))
-        self.classifier = MetaLinear(feature_size, out_features, bias=True)
+                # 14 x 14 - 64
+                nn.Conv2d(64, 64, 3, 2, 1),
+                nn.BatchNorm2d(64),
+                nn.ReLU(True),
+
+                # 7 x 7 - 64
+                nn.Conv2d(64, 64, 3, 2, 1),
+                nn.BatchNorm2d(64),
+                nn.ReLU(True),
+
+                # 4 x 4 - 64
+                nn.Conv2d(64, 64, 3, 2, 1),
+                nn.BatchNorm2d(64),
+                nn.ReLU(True),
+
+                # 2 x 2 - 64
+            )
+        self.classifier = nn.Sequential(
+            # 2 x 2 x 64 = 256
+            nn.Linear(256, self.out_features),
+            nn.LogSoftmax(1)
+        )
 
     def forward(self, inputs):
         features = self.features(inputs)
@@ -109,14 +148,10 @@ def ModelConvOmniglot(out_features, hidden_size=64):
                          feature_size=hidden_size)
 
 
-def ModelConvMiniImagenet(out_features, hidden_size=64):
+def ModelConvMiniImagenet(out_features, hidden_size=32):
     return MetaConvModel(3, out_features, hidden_size=hidden_size,
-                         feature_size=5 * 5 * hidden_size)
-
-
-def ModelMLPSinusoid(hidden_sizes=[40, 40]):
-    return MetaMLPModel(1, 1, hidden_sizes)
+                         feature_size=hidden_size*5*5, use_max_pool=True)
 
 
 if __name__ == '__main__':
-    model = ModelMLPSinusoid()
+    model = ModelConvOmniglot()

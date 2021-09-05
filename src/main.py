@@ -13,6 +13,16 @@ from src.cnaps import CNAPTrainer, CNAPTester
 from src.metaoptnet import MetaOptNetTrainer, MetaOptNetTester
 import wandb
 
+# Implementing meta-dataset:
+#
+# from torchmeta.utils.data import MetaDataLoader
+# from torch.utils.data.dataloader import default_collate
+#
+# from src.datasets.metadataset import MetaDataset
+#
+# dataset = MetaDataset(folder, source='ilsvrc_2012', num_ways=5, num_shots=5, num_shots_test=15, meta_train=True)
+# dataloader = MetaDataLoader(dataset, batch_size=4, collate_fn=default_collate)
+
 
 def parse_args():
     """
@@ -133,6 +143,74 @@ def get_task_sampler(choice):
     return task_sampler[choice]
 
 
+def test_model(args, dataset_name=None):
+    log = Logger(len(glob(f'{args.output_folder}/*/config.json')))
+    log.reset(len(glob(f'{args.output_folder}/*/config.json')), info="Testing Accuracy")
+    for run, config_file in enumerate(glob(f'{args.output_folder}/*/config.json')):
+        with open(config_file, 'r') as f:
+            config = json.load(f)
+        if args.folder is not None:
+            config['folder'] = args.folder
+        if args.num_steps > 0:
+            config['num_steps'] = args.num_steps
+        if args.num_batches > 0:
+            config['num_batches'] = args.num_batches
+        if args.exp_name is not None:
+            config['exp_name'] = args.exp_name
+        for arg in vars(args):
+            if arg not in config.keys():
+                config[arg] = getattr(args, arg)
+        config['verbose'] = args.verbose
+        config['train'] = args.train
+        config['dataset_test'] = args.dataset
+        wandb.init(project='Task_Diversity', config=config, name=config['exp_name'],
+                   settings=wandb.Settings(start_method='thread'), reinit=False)
+        wandb.config = config
+        if config['model'] == 'maml':
+            """
+            MAML Test
+            """
+            maml_tester = MAMLTester(config)
+            log.add_result(run, maml_tester.get_result())
+        elif config['model'] == 'protonet':
+            """
+            Protonet Test
+            """
+            protonet_tester = ProtonetTester(config)
+            log.add_result(run, protonet_tester.get_result())
+        elif config['model'] == 'reptile':
+            """
+            Reptile Test
+            """
+            reptile_tester = ReptileTester(config)
+            log.add_result(run, reptile_tester.get_result())
+        elif config['model'] == 'matching_networks':
+            """
+            MatchingNetworks Test
+            """
+            mn_tester = MatchingNetworksTester(config)
+            log.add_result(run, mn_tester.get_result())
+        elif config['model'] == 'cnaps':
+            """
+            Conditional Neural Adaptive Processes Test
+            """
+            cnap_tester = CNAPTester(config)
+            log.add_result(run, cnap_tester.get_result())
+        elif config['model'] == 'metaoptnet':
+            """
+            MetaOptNet Test
+            """
+            mon_tester = MetaOptNetTester(config)
+            log.add_result(run, mon_tester.get_result())
+    return log
+    if args.dataset_name is not None:
+        print(f"Average Performance of {config['model']} on {args.dataset}/{dataset_name}:")
+    else:
+        print(f"Average Performance of {config['model']} on {args.dataset}:")
+    log.print_statistics()
+    wandb.finish()
+
+
 if __name__ == '__main__':
     args = parse_args()
     torch.cuda.empty_cache()
@@ -203,66 +281,10 @@ if __name__ == '__main__':
 
         print(f"Average Performance of {args.model} on {args.dataset}:")
         log.print_statistics()
-
-    log = Logger(len(glob(f'{args.output_folder}/*/config.json')))
-    log.reset(len(glob(f'{args.output_folder}/*/config.json')), info="Testing Accuracy")
-    for run, config_file in enumerate(glob(f'{args.output_folder}/*/config.json')):
-        with open(config_file, 'r') as f:
-            config = json.load(f)
-        if args.folder is not None:
-            config['folder'] = args.folder
-        if args.num_steps > 0:
-            config['num_steps'] = args.num_steps
-        if args.num_batches > 0:
-            config['num_batches'] = args.num_batches
-        if args.exp_name is not None:
-            config['exp_name'] = args.exp_name
-        for arg in vars(args):
-            if arg not in config.keys():
-                config[arg] = getattr(args, arg)
-        config['verbose'] = args.verbose
-        config['train'] = args.train
-        config['dataset_test'] = args.dataset
-        wandb.init(project='Task_Diversity', config=config, name=config['exp_name'],
-                   settings=wandb.Settings(start_method='thread'), reinit=False)
-        wandb.config = config
-        if config['model'] == 'maml':
-            """
-            MAML Test
-            """
-            maml_tester = MAMLTester(config)
-            log.add_result(run, maml_tester.get_result())
-        elif config['model'] == 'protonet':
-            """
-            Protonet Test
-            """
-            protonet_tester = ProtonetTester(config)
-            log.add_result(run, protonet_tester.get_result())
-        elif config['model'] == 'reptile':
-            """
-            Reptile Test
-            """
-            reptile_tester = ReptileTester(config)
-            log.add_result(run, reptile_tester.get_result())
-        elif config['model'] == 'matching_networks':
-            """
-            MatchingNetworks Test
-            """
-            mn_tester = MatchingNetworksTester(config)
-            log.add_result(run, mn_tester.get_result())
-        elif config['model'] == 'cnaps':
-            """
-            Conditional Neural Adaptive Processes Test
-            """
-            cnap_tester = CNAPTester(config)
-            log.add_result(run, cnap_tester.get_result())
-        elif config['model'] == 'metaoptnet':
-            """
-            MetaOptNet Test
-            """
-            mon_tester = MetaOptNetTester(config)
-            log.add_result(run, mon_tester.get_result())
-
-    print(f"Average Performance of {config['model']} on {args.dataset}:")
-    log.print_statistics()
-    wandb.finish()
+    if args.dataset == 'meta-dataset':
+        for dataset in ['ilsvrc_2012', 'omniglot', 'aircraft', 'cu_birds', 'fungi', 'mscoco', 'quickdraw', 'traffic_sign', 'vgg_flower', 'dtd']:
+            args.dataset = 'single_meta_dataset'
+            args.sub_dataset = dataset
+            test_model(args, dataset)
+    else:
+        test_model(args)
