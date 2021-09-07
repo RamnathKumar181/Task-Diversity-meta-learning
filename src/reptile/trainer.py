@@ -1,5 +1,5 @@
 import wandb
-from torchmeta.utils.data import BatchMetaDataLoader as BMD
+from src.datasets.task_sampler import BatchMetaDataLoader as BMD
 from src.utils import get_benchmark_by_name
 from src.reptile.metalearners import Reptile
 import torch
@@ -7,6 +7,7 @@ import logging
 import os
 import time
 import json
+from collections import OrderedDict
 
 
 class ReptileTrainer():
@@ -17,7 +18,6 @@ class ReptileTrainer():
         logging.basicConfig(level=logging.DEBUG if self.args.verbose else logging.INFO)
         logging.info(f"Configuration while training: {args}")
         self._build()
-        self.meta_iteration = 0
 
     def _build(self):
         self._create_config_file()
@@ -92,10 +92,10 @@ class ReptileTrainer():
                                        num_workers=self.args.num_workers,
                                        pin_memory=True)
 
-        self.optimizer = torch.optim.Adam(self.benchmark.model.parameters(),
-                                          lr=self.args.lr, betas=(0, 0.999))
-        self.meta_optimizer = torch.optim.SGD(self.benchmark.model.parameters(),
-                                              lr=self.args.meta_lr)
+        self.optimizer = torch.optim.SGD(self.benchmark.model.parameters(),
+                                         lr=self.args.lr)
+        self.meta_optimizer = torch.optim.Adam(self.benchmark.model.parameters(),
+                                               lr=self.args.meta_lr)
         wandb.watch(self.benchmark.model)
 
     def _build_metalearner(self):
@@ -106,35 +106,37 @@ class ReptileTrainer():
                                    step_size=self.args.step_size,
                                    outer_step_size=self.args.lr,
                                    loss_function=self.benchmark.loss_function,
-                                   lr=self.args.lr,
-                                   meta_lr=self.args.meta_lr,
-                                   device=self.device)
+                                   meta_optimizer=self.meta_optimizer,
+                                   device=self.device,
+                                   batch_size=self.args.batch_size)
 
-    def set_learning_rate(self, optimizer, lr):
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = lr
+    def run_epoch(self, epoch):
+
+        res = OrderedDict()
+        print('Epoch {}'.format(epoch))
+        train_loss, train_acc, train_grad = self.metalearner.train(self.meta_train_dataloader)
+        valid_loss, valid_acc = self.metalearner.valid(self.meta_val_dataloader)
+        res['epoch'] = epoch
+        res['train_loss'] = train_loss
+        res['train_acc'] = train_acc
+        res['train_grad'] = train_grad
+        res['valid_loss'] = valid_loss
+        res['valid_acc'] = valid_acc
+
+        is_best = False
+        if res['valid_acc'] > self.highest_val:
+            self.highest_val = res['valid_acc']
+            is_best = True
+
+        return res, is_best
 
     def _train(self):
-        best_value = None
         for epoch in range(self.args.num_epochs):
-            frac_done = float(epoch) / self.args.num_epochs
-            current_step_size = self.args.meta_lr * (1. - frac_done)
-            self.metalearner.train(self.meta_train_dataloader,
-                                   max_batches=self.args.num_batches,
-                                   meta_lr=current_step_size,
-                                   verbose=self.args.verbose,
-                                   desc='Training',
-                                   leave=False)
-            results = self.metalearner.evaluate(self.meta_val_dataloader,
-                                                max_batches=self.args.num_batches,
-                                                verbose=self.args.verbose,
-                                                desc='Validation')
-            if (epoch+1) % self.args.log_interval == 0:
-                wandb.log({"Accuracy": results['accuracies_after']})
+            res, is_best = self.run_epoch(epoch)
+            wandb.log({"Accuracy": res['valid_acc']})
             # Save best model
-            if ((best_value is None)
-                    or (best_value < results['accuracies_after'])):
-                best_value = results['accuracies_after']
+            if is_best:
+                self.highest_val = res['valid_acc']
                 save_model = True
             else:
                 save_model = False
@@ -142,7 +144,6 @@ class ReptileTrainer():
             if save_model and (self.args.output_folder is not None):
                 with open(self.args.model_path, 'wb') as f:
                     torch.save(self.benchmark.model.state_dict(), f)
-        self.highest_val = best_value
 
         if hasattr(self.benchmark.meta_train_dataset, 'close'):
             self.benchmark.meta_train_dataset.close()
@@ -195,18 +196,28 @@ class ReptileTester():
                                    num_adaptation_steps=self.config['num_steps'],
                                    step_size=self.config['step_size'],
                                    loss_function=self.benchmark.loss_function,
-                                   device=self.device)
+                                   device=self.device,
+                                   batch_size=self.config['batch_size'])
+
+    def run_epoch(self, epoch):
+
+        res = OrderedDict()
+        print('Epoch {}'.format(epoch))
+        loss_log, acc_log = self.metalearner.valid(self.meta_test_dataloader)
+        res['epoch'] = epoch
+        res['test_loss'] = loss_log
+        res['test_acc'] = acc_log
+
+        return res
 
     def _test(self):
-        results = self.metalearner.evaluate(self.meta_test_dataloader,
-                                            max_batches=self.config['num_batches'],
-                                            verbose=self.config['verbose'],
-                                            desc='Testing')
+        res, is_best = self.run_epoch(0)
+
         dirname = os.path.dirname(self.config['model_path'])
         with open(os.path.join(dirname, 'results.json'), 'w') as f:
-            json.dump(results, f)
+            json.dump(res, f)
 
-        self.highest_test = results['accuracies_after']
+        self.highest_test = res['test_acc']
 
     def get_result(self):
         return tuple([self.highest_test])

@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import sys
 import struct
+import os
 
 
 def create_index(tfrecord_file: str, index_file: str) -> None:
@@ -20,7 +21,7 @@ def create_index(tfrecord_file: str, index_file: str) -> None:
     """
     infile = open(tfrecord_file, "rb")
     outfile = open(index_file, "w")
-
+    print(f"Path to output: {index_file}")
     while True:
         current = infile.tell()
         try:
@@ -37,6 +38,7 @@ def create_index(tfrecord_file: str, index_file: str) -> None:
             break
     infile.close()
     outfile.close()
+    os.remove(tfrecord_file)
 
 
 def main():

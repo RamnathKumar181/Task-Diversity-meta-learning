@@ -5,7 +5,7 @@ import logging
 import torch
 from src.protonet.metalearners import PrototypicalNetwork as proto_net
 from src.utils import get_benchmark_by_name
-from torchmeta.utils.data import BatchMetaDataLoader as BMD
+from src.datasets.task_sampler import BatchMetaDataLoader as BMD
 import wandb
 
 

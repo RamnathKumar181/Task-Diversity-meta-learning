@@ -48,6 +48,9 @@ def parse_args():
                         choices=['sinusoid', 'omniglot', 'miniimagenet', 'meta_dataset'],
                         default='omniglot',
                         help='Name of the dataset (default: omniglot).')
+    parser.add_argument('--sub-dataset', type=str,
+                        default='ilsvrc_2012',
+                        help='Name of the dataset (default: omniglot).')
     parser.add_argument('--output-folder', type=str, default=None,
                         help='Path to the output folder to save the model.')
     parser.add_argument('--num-ways', type=int, default=5,

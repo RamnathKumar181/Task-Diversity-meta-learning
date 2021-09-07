@@ -1,9 +1,54 @@
-from src.utils import compute_accuracy, tensors_to_device
 from collections import OrderedDict
 from tqdm import tqdm
 import numpy as np
 import torch
-from copy import deepcopy
+import higher
+import torch.nn.functional as F
+
+
+def get_accuracy(logits, targets):
+    """Compute the accuracy (after adaptation) of MAML on the test/query points
+    Parameters
+    ----------
+    logits : `torch.FloatTensor` instance
+        Outputs/logits of the model on the query points. This tensor has shape
+        `(num_examples, num_classes)`.
+    targets : `torch.LongTensor` instance
+        A tensor containing the targets of the query points. This tensor has
+        shape `(num_examples,)`.
+    Returns
+    -------
+    accuracy : `torch.FloatTensor` instance
+        Mean accuracy on the query points
+    """
+    _, predictions = torch.max(logits, dim=-1)
+    return torch.mean(predictions.eq(targets).float())
+
+
+def mix_grad(grad_list, weight_list):
+    '''
+    calc weighted average of gradient
+    '''
+    mixed_grad = []
+    for g_list in zip(*grad_list):
+        g_list = torch.stack([weight_list[i] * g_list[i] for i in range(len(weight_list))])
+        mixed_grad.append(torch.sum(g_list, dim=0))
+    return mixed_grad
+
+
+def apply_grad(model, grad):
+    '''
+    assign gradient to model(nn.Module) instance. return the norm of gradient
+    '''
+    grad_norm = 0
+    for p, g in zip(model.parameters(), grad):
+        if p.grad is None:
+            p.grad = g
+        else:
+            p.grad += g
+        grad_norm += torch.sum(g**2)
+    grad_norm = grad_norm ** (1/2)
+    return grad_norm.item()
 
 
 class Reptile(object):
@@ -46,12 +91,13 @@ class Reptile(object):
     def __init__(self, model, optimizer=None, step_size=0.1, outer_step_size=0.001, first_order=False,
                  learn_step_size=False, per_param_step_size=False,
                  num_adaptation_steps=1, scheduler=None,
-                 loss_function=torch.nn.NLLLoss, device=None, lr=0.001, meta_lr=0.001, ohtm=False):
+                 loss_function=F.cross_entropy, device=None, lr=0.001, meta_optimizer=None, ohtm=False, batch_size=4):
         self.model = model.to(device=device)
         self.optimizer = optimizer
         self.step_size = step_size
         self.lr = lr
-        self.meta_lr = meta_lr
+        self.batch_size = batch_size
+        self.meta_optimizer = meta_optimizer
         self.first_order = first_order
         self.num_adaptation_steps = num_adaptation_steps
         self.scheduler = scheduler
@@ -79,142 +125,110 @@ class Reptile(object):
                 self.scheduler.base_lrs([group['initial_lr']
                                          for group in self.optimizer.param_groups])
 
-    def get_outer_loss(self, batch, train=False):
+    @torch.enable_grad()
+    def inner_loop(self, fmodel, diffopt, train_input, train_target):
+
+        train_logit, _ = fmodel(train_input)
+        inner_loss = F.cross_entropy(train_logit, train_target)
+        diffopt.step(inner_loss)
+
+        return None
+
+    def outer_loop(self, batch, train=False):
+
         if 'test' not in batch:
             raise RuntimeError('The batch does not contain any test dataset.')
-
+        self.model.zero_grad()
         _, test_targets, _ = batch['test']
-        num_tasks = test_targets.size(0)
-        is_classification_task = (not test_targets.dtype.is_floating_point)
-        results = {
-            'num_tasks': num_tasks,
-            'inner_losses': np.zeros((self.num_adaptation_steps,
-                                      num_tasks), dtype=np.float32),
-            'outer_losses': np.zeros((num_tasks,), dtype=np.float32),
-            'mean_outer_loss': 0.
-        }
-        if is_classification_task:
-            results.update({
-                'accuracies_before': np.zeros((num_tasks,), dtype=np.float32),
-                'accuracies_after': np.zeros((num_tasks,), dtype=np.float32)
-            })
 
-        for task_id, (train_inputs, train_targets, task, test_inputs, test_targets, _) \
+        loss_log = 0
+        acc_log = 0
+        loss_list = []
+        grad_list = []
+        self.model.zero_grad()
+        for task_id, (train_input, train_target, task, test_input, test_target, _) \
                 in enumerate(zip(*batch['train'], *batch['test'])):
-            train_inputs = train_inputs.to(device=self.device)
-            train_targets = train_targets.to(device=self.device)
-            adaptation_results = self.adapt(train_inputs, train_targets,
-                                            is_classification_task=is_classification_task,
-                                            num_adaptation_steps=self.num_adaptation_steps,
-                                            step_size=self.step_size)
-            results['inner_losses'][:, task_id] = adaptation_results['inner_losses']
-            if is_classification_task:
-                results['accuracies_before'][task_id] = adaptation_results['accuracy_before']
-            with torch.set_grad_enabled(self.model.training):
-                test_inputs = test_inputs.to(device=self.device)
-                test_logits = self.model(test_inputs)
+            train_input = train_input.to(device=self.device)
+            train_target = train_target.to(device=self.device)
+            test_input = test_input.to(device=self.device)
+            test_target = test_target.to(device=self.device)
+            with higher.innerloop_ctx(self.model, self.optimizer, track_higher_grads=True) as (fmodel, diffopt):
 
-            if is_classification_task:
-                results['accuracies_after'][task_id] = compute_accuracy(
-                    test_logits, test_targets)
-            if self.ohtm and train:
-                self.hardest_task[str(task.cpu().tolist())] = results['accuracies_after'][task_id]
-        results['mean_outer_loss'] = 0
-        return 0, results
+                for step in range(5):
+                    if train:
+                        index = np.random.permutation(np.arange(len(test_input)))[:10]
+                        train_input = test_input[index]
+                        train_target = test_target[index]
+                    self.inner_loop(fmodel, diffopt, train_input, train_target)
 
-    def adapt(self, inputs, targets, is_classification_task=None,
-              num_adaptation_steps=5, step_size=0.1):
-        if is_classification_task is None:
-            is_classification_task = (not targets.dtype.is_floating_point)
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr, betas=(0, 0.999))
-        results = {'inner_losses': np.zeros(
-            (num_adaptation_steps,), dtype=np.float32)}
+                with torch.no_grad():
+                    test_logit, _ = fmodel(test_input)
+                    outer_loss = F.cross_entropy(test_logit, test_target)
+                    loss_log += outer_loss.item()/self.batch_size
+                    loss_list.append(outer_loss.item())
+                    acc_log += get_accuracy(test_logit, test_target).item()/self.batch_size
+                    if self.ohtm and train:
+                        self.hardest_task[str(task.cpu().tolist())
+                                          ] = get_accuracy(test_logit, test_target).item()
 
-        for step in range(num_adaptation_steps):
-            logits = self.model(inputs)
-            inner_loss = self.loss_function(logits, targets)
-            results['inner_losses'][step] = inner_loss.item()
+                if train:
+                    outer_grad = []
+                    for p_0, p_T in zip(fmodel.parameters(time=0), fmodel.parameters(time=step)):
+                        outer_grad.append(-(p_T - p_0).detach())
+                    grad_list.append(outer_grad)
 
-            if (step == 0) and is_classification_task:
-                results['accuracy_before'] = compute_accuracy(logits, targets)
+        if train:
+            weight = torch.ones(len(grad_list))/len(grad_list)
+            grad = mix_grad(grad_list, weight)
+            grad_log = apply_grad(self.model, grad)
+            self.meta_optimizer.step()
 
-            self.model.zero_grad()
-            inner_loss.backward()
-            self.optimizer.step()
-        return results
+            return loss_log, acc_log, grad_log
+        else:
+            return loss_log, acc_log
 
-    def train(self, dataloader, max_batches=500, meta_lr=0.001, verbose=True, **kwargs):
-        with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
-            for results in self.train_iter(dataloader, max_batches=max_batches, meta_lr=meta_lr):
-                pbar.update(1)
-                postfix = {'loss': 'NaN'}
-                if 'accuracies_after' in results:
-                    postfix['accuracy'] = '{0:.4f}'.format(
-                        np.mean(results['accuracies_after']))
-                pbar.set_postfix(**postfix)
+    def train(self, dataloader):
 
-    def train_iter(self, dataloader, max_batches=500, meta_lr=0.001):
-        if self.optimizer is None:
-            raise RuntimeError('Trying to call `train_iter`, while the '
-                               'optimizer is `None`. In order to train `{0}`, you must '
-                               'specify a Pytorch optimizer as the argument of `{0}` '
-                               '(eg. `{0}(model, optimizer=torch.optim.SGD(model.'
-                               'parameters(), lr=0.01), ...).'.format(__class__.__name__))
-        num_batches = 0
-        self.model.train()
-        weights_original = deepcopy(self.model.state_dict())
-        new_weights = []
-        while num_batches < max_batches:
-            for batch in dataloader:
-                if num_batches >= max_batches:
+        loss_list = []
+        acc_list = []
+        grad_list = []
+        with tqdm(dataloader, total=250) as pbar:
+            for batch_idx, batch in enumerate(pbar):
+
+                loss_log, acc_log, grad_log = self.outer_loop(batch, train=True)
+
+                loss_list.append(loss_log)
+                acc_list.append(acc_log)
+                grad_list.append(grad_log)
+                pbar.set_description('loss = {:.4f} || acc={:.4f} || grad={:.4f}'.format(
+                    np.mean(loss_list), np.mean(acc_list), np.mean(grad_list)))
+                if batch_idx >= 250:
                     break
 
-                batch = tensors_to_device(batch, device=self.device)
-                outer_loss, results = self.get_outer_loss(batch, train=True)
-                new_weights.append(deepcopy(self.model.state_dict()))
-                self.model.load_state_dict(
-                    {name: weights_original[name] for name in weights_original})
-                yield results
-                num_batches += 1
-        ws = len(new_weights)
-        fweights = {name: new_weights[0][name]/float(ws) for name in new_weights[0]}
-        for i in range(1, ws):
-            for name in new_weights[i]:
-                fweights[name] += new_weights[i][name]/float(ws)
+        loss = np.round(np.mean(loss_list), 4)
+        acc = np.round(np.mean(acc_list), 4)
+        grad = np.round(np.mean(grad_list), 4)
 
-        self.model.load_state_dict({name:
-                                    weights_original[name] + ((fweights[name] - weights_original[name]) * meta_lr) for name in weights_original})
+        return loss, acc, grad
 
-    def evaluate(self, dataloader, max_batches=100, verbose=True, **kwargs):
-        mean_outer_loss, mean_accuracy, count = 0., 0., 0
-        with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
-            for results in self.evaluate_iter(dataloader, max_batches=max_batches):
-                pbar.update(1)
-                count += 1
-                postfix = {'loss': 'NaN'}
-                if 'accuracies_after' in results:
-                    mean_accuracy += (np.mean(results['accuracies_after'])
-                                      - mean_accuracy) / count
-                    postfix['accuracy'] = '{0:.4f}'.format(mean_accuracy)
-                pbar.set_postfix(**postfix)
+    @torch.no_grad()
+    def valid(self, dataloader):
 
-        mean_results = {'mean_outer_loss': mean_outer_loss}
-        if 'accuracies_after' in results:
-            mean_results['accuracies_after'] = mean_accuracy
+        loss_list = []
+        acc_list = []
+        with tqdm(dataloader, total=150) as pbar:
+            for batch_idx, batch in enumerate(pbar):
 
-        return mean_results
+                loss_log, acc_log = self.outer_loop(batch, train=False)
 
-    def evaluate_iter(self, dataloader, max_batches=500):
-        num_batches = 0
-        self.model.eval()
-        weights_original = deepcopy(self.model.state_dict())
-        while num_batches < max_batches:
-            for batch in dataloader:
-                if num_batches >= max_batches:
+                loss_list.append(loss_log)
+                acc_list.append(acc_log)
+                pbar.set_description('loss = {:.4f} || acc={:.4f}'.format(
+                    np.mean(loss_list), np.mean(acc_list)))
+                if batch_idx >= 150:
                     break
-                batch = tensors_to_device(batch, device=self.device)
-                _, results = self.get_outer_loss(batch)
-                yield results
 
-                num_batches += 1
-        self.model.load_state_dict({name: weights_original[name] for name in weights_original})
+        loss = np.round(np.mean(loss_list), 4)
+        acc = np.round(np.mean(acc_list), 4)
+
+        return loss, acc

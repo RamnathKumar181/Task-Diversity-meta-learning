@@ -91,6 +91,22 @@ def get_dataspecs(folder, num_ways, num_shots, num_shots_test,
     return dataset_spec, data_config, episod_config
 
 
+def init_metadataset_data(name, sub_dataset_name):
+    if name == "meta-dataset":
+        train_set = ['ilsvrc_2012', 'omniglot', 'aircraft',
+                     'cu_birds', 'dtd', 'quickdraw', 'fungi', 'vgg_flower']
+        validation_set = ['ilsvrc_2012', 'omniglot', 'aircraft', 'cu_birds', 'dtd', 'quickdraw', 'fungi', 'vgg_flower',
+                          'mscoco']
+        test_set = ["ilsvrc_2012", "omniglot", "aircraft", "cu_birds", "dtd", "quickdraw", "fungi",
+                    "vgg_flower", "traffic_sign", "mscoco"]
+    else:
+        train_set = [sub_dataset_name]
+        validation_set = [sub_dataset_name]
+        test_set = [sub_dataset_name]
+
+    return train_set, validation_set, test_set
+
+
 def get_benchmark_by_name(model_name,
                           name,
                           folder,
@@ -168,7 +184,7 @@ def get_benchmark_by_name(model_name,
             loss_function = F.cross_entropy
         elif model_name == 'reptile':
             model = ModelConvOmniglotReptile(num_ways, hidden_size=hidden_size)
-            loss_function = torch.nn.CrossEntropyLoss()
+            loss_function = F.cross_entropy
         elif model_name == 'protonet':
             model = Protonet_Omniglot()
             loss_function = prototypical_loss
@@ -227,6 +243,46 @@ def get_benchmark_by_name(model_name,
             loss_function = F.cross_entropy
         elif model_name == 'reptile':
             model = ModelConvMiniImagenetReptile(num_ways, hidden_size=hidden_size)
+            # meta_train_dataset = MiniImagenet(folder,
+            #                                   transform=transforms.Compose([
+            #                                       transforms.RandomCrop(80, padding=8),
+            #                                       transforms.ColorJitter(
+            #                                           brightness=0.4, contrast=0.4, saturation=0.4),
+            #                                       transforms.RandomHorizontalFlip(),
+            #                                       transforms.ToTensor(),
+            #                                       transforms.Normalize(
+            #                                           np.array([0.485, 0.456, 0.406]),
+            #                                           np.array([0.229, 0.224, 0.225])),
+            #                                   ]),
+            #                                   target_transform=Categorical(num_ways),
+            #                                   num_classes_per_task=num_ways,
+            #                                   meta_train=True,
+            #                                   dataset_transform=dataset_transform,
+            #                                   download=True)
+            # meta_val_dataset = MiniImagenet(folder,
+            #                                 transform=transforms.Compose([
+            #                                     transforms.CenterCrop(80),
+            #                                     transforms.ToTensor(),
+            #                                     transforms.Normalize(
+            #                                         np.array([0.485, 0.456, 0.406]),
+            #                                         np.array([0.229, 0.224, 0.225]))
+            #                                 ]),
+            #                                 target_transform=Categorical(num_ways),
+            #                                 num_classes_per_task=num_ways,
+            #                                 meta_val=True,
+            #                                 dataset_transform=dataset_transform)
+            # meta_test_dataset = MiniImagenet(folder,
+            #                                  transform=transforms.Compose([
+            #                                      transforms.CenterCrop(80),
+            #                                      transforms.ToTensor(),
+            #                                      transforms.Normalize(
+            #                                          np.array([0.485, 0.456, 0.406]),
+            #                                          np.array([0.229, 0.224, 0.225]))
+            #                                  ]),
+            #                                  target_transform=Categorical(num_ways),
+            #                                  num_classes_per_task=num_ways,
+            #                                  meta_test=True,
+            #                                  dataset_transform=dataset_transform)
             loss_function = F.cross_entropy
         elif model_name == 'protonet':
             model = Protonet_MiniImagenet()
@@ -243,9 +299,8 @@ def get_benchmark_by_name(model_name,
                                num_ways, num_shots, num_shots_test)
             loss_function = torch.nn.NLLLoss
     elif name == 'meta_dataset':
-
-        meta_train_dataset = MetaDataset(folder, source='ilsvrc_2012',
-                                         num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,
+        train_set, validation_set, test_set = init_metadataset_data()
+        meta_train_dataset = MetaDataset(folder, num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,
                                          meta_train=True)
         meta_val_dataset = MetaDataset(folder, source='ilsvrc_2012',
                                        num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,
@@ -275,7 +330,7 @@ def get_benchmark_by_name(model_name,
                                num_ways, num_shots, num_shots_test)
             loss_function = torch.nn.NLLLoss
     elif name == 'single_meta_dataset':
-
+        train_set, validation_set, test_set = init_metadataset_data()
         meta_train_dataset = SingleMetaDataset(folder, source='ilsvrc_2012',
                                                num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,
                                                meta_train=True)

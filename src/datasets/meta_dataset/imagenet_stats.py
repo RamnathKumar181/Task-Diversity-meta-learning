@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2020 The Meta-Dataset Authors.
+# Copyright 2021 The Meta-Dataset Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,10 +16,15 @@
 # Lint as: python2, python3
 """Computes stats of the graphs created in imagenet_specification.py."""
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import collections
 
 from absl import logging
 import numpy as np
+from six.moves import range
 
 
 def log_graph_stats(nodes,
@@ -30,24 +35,22 @@ def log_graph_stats(nodes,
                     min_way=5,
                     max_way=50):
     """Compute and display statistics about the graph defined by nodes.
-
     In particular, the statistics that are computed are:
     the number of nodes, the numbers of roots and leaves, the min/max/mean number
     of images living in the leaves, the min/max/mean number of children of
     internal nodes, the min/max/mean depth of leaves.
-
     Args:
-        nodes: A set of Synsets representing a graph.
-        num_images: A dict mapping each node's WordNet id to the number of images
-            living in the leaves spanned by that node.
-        get_leaves_fn: A function that returns the set of leaves of a graph defined
-            by a given set of nodes, e.g. get_leaves in imagenet_specification.py
-        get_spanning_leaves_fn: A function that returns a dict mapping each node of
-            a given set of nodes to the set of leaf Synsets spanned by that node, e.g.
-            get_spanning_leaves in imagenet_specification.py.
-        graph_name: A name for the graph (for the printed logs).
-        min_way: The smallest allowable way of an episode.
-        max_way: The largest allowable way of an episode.
+      nodes: A set of Synsets representing a graph.
+      num_images: A dict mapping each node's WordNet id to the number of images
+        living in the leaves spanned by that node.
+      get_leaves_fn: A function that returns the set of leaves of a graph defined
+        by a given set of nodes, e.g. get_leaves in imagenet_specification.py
+      get_spanning_leaves_fn: A function that returns a dict mapping each node of
+        a given set of nodes to the set of leaf Synsets spanned by that node, e.g.
+        get_spanning_leaves in imagenet_specification.py.
+      graph_name: A name for the graph (for the printed logs).
+      min_way: The smallest allowable way of an episode.
+      max_way: The largest allowable way of an episode.
     """
     logging.info(
         'Graph statistics%s:',
@@ -120,7 +123,8 @@ def log_graph_stats(nodes,
         'total of %d different ways.', len(possible_ways_in_range),
         len(set(possible_ways_in_range)))
     # Are all leaves reachable when using the restricted way?
-    logging.info(' %d / %d are reachable.', len(all_reachable_leaves), len(leaves))
+    logging.info(' %d / %d are reachable.', len(all_reachable_leaves),
+                 len(leaves))
 
 
 def log_stats_finegrainedness(nodes,
@@ -131,20 +135,19 @@ def log_stats_finegrainedness(nodes,
                               num_leaf_pairs=10000,
                               path='longest'):
     """Gather some stats relating to the heights of LCA's of random leaf pairs.
-
     Args:
-        nodes: A set of Synsets.
-        get_leaves_fn: A function that returns the set of leaves of a graph defined
-            by a given set of nodes, e.g. get_leaves in imagenet_specification.py
-        get_lowest_common_ancestor_fn: A function that returns the lowest common
-            ancestor node of a given pair of Synsets and its height, e.g. the
-            get_lowest_common_ancestor function in imagenet_specification.py.
-        graph_name: A name for the graph defined by nodes (for logging).
-        num_per_height_to_print: An int. The number of example leaf pairs and
-            corresponding lowest common ancestors to print for each height.
-        num_leaf_pairs: An int. The number of random leaf pairs to sample.
-        path: A str. The 'path' argument of get_lowest_common_ancestor. Can be
-            either 'longest' or 'all.
+      nodes: A set of Synsets.
+      get_leaves_fn: A function that returns the set of leaves of a graph defined
+        by a given set of nodes, e.g. get_leaves in imagenet_specification.py
+      get_lowest_common_ancestor_fn: A function that returns the lowest common
+        ancestor node of a given pair of Synsets and its height, e.g. the
+        get_lowest_common_ancestor function in imagenet_specification.py.
+      graph_name: A name for the graph defined by nodes (for logging).
+      num_per_height_to_print: An int. The number of example leaf pairs and
+        corresponding lowest common ancestors to print for each height.
+      num_leaf_pairs: An int. The number of random leaf pairs to sample.
+      path: A str. The 'path' argument of get_lowest_common_ancestor. Can be
+        either 'longest' or 'all.
     """
     if not nodes:
         # Empty set

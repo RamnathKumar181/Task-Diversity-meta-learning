@@ -25,8 +25,9 @@ import json
 import os
 
 from absl import logging
-from src.datasets.meta_dataset import imagenet_specification
-from src.datasets.meta_dataset.utils import Split
+from src.dataset import meta_dataset as data
+from src.dataset.meta_dataset import imagenet_specification
+from src.dataset.meta_dataset import learning_spec
 import numpy as np
 import six
 from six.moves import cPickle as pkl
@@ -37,32 +38,26 @@ import tensorflow.compat.v1 as tf
 
 def get_classes(split, classes_per_split):
     """Gets the sequence of class labels for a split.
-
     Class id's are returned ordered and without gaps.
-
     Args:
       split: A Split, the split for which to get classes.
       classes_per_split: Matches each Split to the number of its classes.
-
     Returns:
       The sequence of classes for the split.
-
     Raises:
       ValueError: An invalid split was specified.
     """
-    print(split)
-    print(classes_per_split)
     num_classes = classes_per_split[split]
 
     # Find the starting index of classes for the given split.
-    if split == Split.TRAIN:
+    if split == learning_spec.Split.TRAIN:
         offset = 0
-    elif split == Split.VALID:
-        offset = classes_per_split[Split.TRAIN]
-    elif split == Split.TEST:
+    elif split == learning_spec.Split.VALID:
+        offset = classes_per_split[learning_spec.Split.TRAIN]
+    elif split == learning_spec.Split.TEST:
         offset = (
-            classes_per_split[Split.TRAIN] +
-            classes_per_split[Split.VALID])
+            classes_per_split[learning_spec.Split.TRAIN] +
+            classes_per_split[learning_spec.Split.VALID])
     else:
         raise ValueError('Invalid dataset split.')
 
@@ -73,20 +68,18 @@ def get_classes(split, classes_per_split):
 def _check_validity_of_restricted_classes_per_split(
         restricted_classes_per_split, classes_per_split):
     """Check the validity of the given restricted_classes_per_split.
-
     Args:
       restricted_classes_per_split: A dict mapping Split enums to the number of
         classes to restrict to for that split.
       classes_per_split: A dict mapping Split enums to the total available number
         of classes for that split.
-
     Raises:
       ValueError: if restricted_classes_per_split is invalid.
     """
     for split_enum, num_classes in restricted_classes_per_split.items():
         if split_enum not in [
-            Split.TRAIN, Split.VALID,
-            Split.TEST
+            learning_spec.Split.TRAIN, learning_spec.Split.VALID,
+            learning_spec.Split.TEST
         ]:
             raise ValueError('Invalid key {} in restricted_classes_per_split.'
                              'Valid keys are: learning_spec.Split.TRAIN, '
@@ -103,7 +96,6 @@ def _check_validity_of_restricted_classes_per_split(
 
 def get_total_images_per_class(data_spec, class_id=None, pool=None):
     """Returns the total number of images of a class in a data_spec and pool.
-
     Args:
       data_spec: A DatasetSpecification, or BiLevelDatasetSpecification.
       class_id: The class whose number of images will be returned. If this is
@@ -111,7 +103,6 @@ def get_total_images_per_class(data_spec, class_id=None, pool=None):
         each class.
       pool: A string ('train' or 'test', optional) indicating which example-level
         split to select, if the current dataset has them.
-
     Raises:
       ValueError: when
         - no class_id specified and yet there is class imbalance, or
@@ -137,7 +128,7 @@ def get_total_images_per_class(data_spec, class_id=None, pool=None):
             raise ValueError('DatasetSpecification {} has example-level splits, so '
                              'the "pool" argument has to be set (to "train" or '
                              '"test".'.format(data_spec.name))
-    elif not False:
+    elif not data.POOL_SUPPORTED:
         raise NotImplementedError('Example-level splits or pools not supported.')
 
     return num_images
@@ -148,7 +139,6 @@ class BenchmarkSpecification(
         'BenchmarkSpecification', 'name, image_shape, dataset_spec_list,'
         'has_dag_ontology, has_bilevel_ontology, splits_to_contribute')):
     """The specification of a benchmark, consisting of multiple datasets.
-
       Args:
         name: string, the name of the benchmark.
         image_shape: a sequence of dimensions representing the shape that each
@@ -223,11 +213,11 @@ class BenchmarkSpecification(
             else:
                 classes_per_split = dataset_spec.classes_per_split
             invalid_train_split = ('train' in dataset_splits and
-                                   not classes_per_split[Split.TRAIN])
+                                   not classes_per_split[learning_spec.Split.TRAIN])
             invalid_valid_split = ('valid' in dataset_splits and
-                                   not classes_per_split[Split.VALID])
+                                   not classes_per_split[learning_spec.Split.VALID])
             invalid_test_split = ('test' in dataset_splits and
-                                  not classes_per_split[Split.TEST])
+                                  not classes_per_split[learning_spec.Split.TEST])
             if invalid_train_split or invalid_valid_split or invalid_test_split:
                 raise ValueError('A dataset can not contribute to a split if it has '
                                  'no classes assigned to that split.')
@@ -243,7 +233,6 @@ class DatasetSpecification(
                            ('name, classes_per_split, images_per_class, '
                             'class_names, path, file_pattern'))):
     """The specification of a dataset.
-
       Args:
         name: string, the name of the dataset.
         classes_per_split: a dict specifying the number of classes allocated to
@@ -269,13 +258,11 @@ class DatasetSpecification(
 
     def initialize(self, restricted_classes_per_split=None):
         """Initializes a DatasetSpecification.
-
         Args:
           restricted_classes_per_split: A dict that specifies for each split, a
             number to restrict its classes to. This number must be no greater than
             the total number of classes of that split. By default this is None and
             no restrictions are applied (all classes are used).
-
         Raises:
           ValueError: Invalid file_pattern provided.
         """
@@ -292,14 +279,12 @@ class DatasetSpecification(
 
     def get_total_images_per_class(self, class_id=None, pool=None):
         """Returns the total number of images for the specified class.
-
         Args:
           class_id: The class whose number of images will be returned. If this is
             None, it is assumed that the dataset has the same number of images for
             each class.
           pool: A string ('train' or 'test', optional) indicating which
             example-level split to select, if the current dataset has them.
-
         Raises:
           ValueError: when
             - no class_id specified and yet there is class imbalance, or
@@ -312,15 +297,11 @@ class DatasetSpecification(
 
     def get_classes(self, split):
         """Gets the sequence of class labels for a split.
-
         Labels are returned ordered and without gaps.
-
         Args:
           split: A Split, the split for which to get classes.
-
         Returns:
           The sequence of classes for the split.
-
         Raises:
           ValueError: An invalid split was specified.
         """
@@ -328,7 +309,6 @@ class DatasetSpecification(
 
     def to_dict(self):
         """Returns a dictionary for serialization to JSON.
-
         Each member is converted to an elementary type that can be serialized to
         JSON readily.
         """
@@ -360,7 +340,6 @@ class BiLevelDatasetSpecification(
                             'superclass_names, class_names, path, '
                             'file_pattern'))):
     """The specification of a dataset that has a two-level hierarchy.
-
       Args:
         name: string, the name of the dataset.
         superclasses_per_split: a dict specifying the number of superclasses
@@ -384,13 +363,11 @@ class BiLevelDatasetSpecification(
 
     def initialize(self, restricted_classes_per_split=None):
         """Initializes a DatasetSpecification.
-
         Args:
           restricted_classes_per_split: A dict that specifies for each split, a
             number to restrict its classes to. This number must be no greater than
             the total number of classes of that split. By default this is None and
             no restrictions are applied (all classes are used).
-
         Raises:
           ValueError: Invalid file_pattern provided
         """
@@ -413,14 +390,12 @@ class BiLevelDatasetSpecification(
 
     def get_total_images_per_class(self, class_id=None, pool=None):
         """Returns the total number of images for the specified class.
-
         Args:
           class_id: The class whose number of images will be returned. If this is
             None, it is assumed that the dataset has the same number of images for
             each class.
           pool: A string ('train' or 'test', optional) indicating which
             example-level split to select, if the current dataset has them.
-
         Raises:
           ValueError: when
             - no class_id specified and yet there is class imbalance, or
@@ -433,15 +408,11 @@ class BiLevelDatasetSpecification(
 
     def get_superclasses(self, split):
         """Gets the sequence of superclass labels for a split.
-
         Labels are returned ordered and without gaps.
-
         Args:
           split: A Split, the split for which to get the superclasses.
-
         Returns:
           The sequence of superclasses for the split.
-
         Raises:
           ValueError: An invalid split was specified.
         """
@@ -455,23 +426,21 @@ class BiLevelDatasetSpecification(
 
     def _get_split_offset(self, split):
         """Returns the starting class id of the contiguous chunk of ids of split.
-
         Args:
           split: A Split, the split for which to get classes.
-
         Raises:
           ValueError: Invalid dataset split.
         """
-        if split == Split.TRAIN:
+        if split == learning_spec.Split.TRAIN:
             offset = 0
-        elif split == Split.VALID:
+        elif split == learning_spec.Split.VALID:
             previous_superclasses = range(
-                0, self.superclasses_per_split[Split.TRAIN])
+                0, self.superclasses_per_split[learning_spec.Split.TRAIN])
             offset = self._count_classes_in_superclasses(previous_superclasses)
-        elif split == Split.TEST:
+        elif split == learning_spec.Split.TEST:
             previous_superclasses = range(
-                0, self.superclasses_per_split[Split.TRAIN] +
-                self.superclasses_per_split[Split.VALID])
+                0, self.superclasses_per_split[learning_spec.Split.TRAIN] +
+                self.superclasses_per_split[learning_spec.Split.VALID])
             offset = self._count_classes_in_superclasses(previous_superclasses)
         else:
             raise ValueError('Invalid dataset split.')
@@ -479,12 +448,9 @@ class BiLevelDatasetSpecification(
 
     def get_classes(self, split):
         """Gets the sequence of class labels for a split.
-
         Labels are returned ordered and without gaps.
-
         Args:
           split: A Split, the split for which to get classes.
-
         Returns:
           The sequence of classes for the split.
         """
@@ -504,13 +470,11 @@ class BiLevelDatasetSpecification(
     def get_class_ids_from_superclass_subclass_inds(self, split, superclass_id,
                                                     class_inds):
         """Gets the class ids of a number of classes of a given superclass.
-
         Args:
           split: A Split, the split for which to get classes.
           superclass_id: An int. The id of a superclass.
           class_inds: A list or sequence of ints. The indices into the classes of
             the superclass superclass_id that we wish to return class id's for.
-
         Returns:
           rel_class_ids: A list of ints of length equal to that of class_inds. The
             class id's relative to the split (between 0 and num classes in split).
@@ -535,7 +499,6 @@ class BiLevelDatasetSpecification(
 
     def to_dict(self):
         """Returns a dictionary for serialization to JSON.
-
         Each member is converted to an elementary type that can be serialized to
         JSON readily.
         """
@@ -556,7 +519,6 @@ class HierarchicalDatasetSpecification(
                            ('name, split_subgraphs, images_per_class, '
                             'class_names, path, file_pattern'))):
     """The specification of a hierarchical dataset.
-
       Args:
         name: string, the name of the dataset.
         split_subgraphs: a dict that maps each Split to a set of nodes of its
@@ -579,7 +541,6 @@ class HierarchicalDatasetSpecification(
     # TODO(etriantafillou): Move this method to the __init__ of that revised class
     def initialize(self, restricted_classes_per_split=None):
         """Initializes a HierarchicalDatasetSpecification.
-
         Args:
           restricted_classes_per_split: A dict that specifies for each split, a
             number to restrict its classes to. This number must be no greater than
@@ -595,7 +556,7 @@ class HierarchicalDatasetSpecification(
 
         # Map each class ID to its corresponding number of examples.
         examples_per_class = {}
-        for split in Split:
+        for split in learning_spec.Split:
             leaves = imagenet_specification.get_leaves(self.split_subgraphs[split])
             for node in leaves:
                 num_examples = self.images_per_class[split][node]
@@ -619,15 +580,14 @@ class HierarchicalDatasetSpecification(
 
         classes_per_split = {}
         for split in [
-            Split.TRAIN, Split.VALID,
-            Split.TEST
+            learning_spec.Split.TRAIN, learning_spec.Split.VALID,
+            learning_spec.Split.TEST
         ]:
             classes_per_split[split] = count_split_classes(split)
         return classes_per_split
 
     def get_split_subgraph(self, split):
         """Returns the sampling subgraph DAG for the given split.
-
         Args:
           split: A Split, the split for which to get classes.
         """
@@ -635,7 +595,6 @@ class HierarchicalDatasetSpecification(
 
     def get_classes(self, split):
         """Returns a list of the class id's of classes assigned to split.
-
         Args:
           split: A Split, the split for which to get classes.
         """
@@ -647,15 +606,12 @@ class HierarchicalDatasetSpecification(
 
     def get_total_images_per_class(self, class_id, pool=None):
         """Gets the number of images of class whose id is class_id.
-
         Args:
           class_id: The integer class id of a class.
           pool: None or string, unused. Should be None because no dataset with a DAG
             hierarchy supports example-level splits currently.
-
         Returns:
           An integer representing the number of images of class with id class_id.
-
         Raises:
           ValueError: no class_id specified yet there is class imbalance, or
             class_id is specified but doesn't correspond to any class, or "pool"
@@ -672,7 +628,6 @@ class HierarchicalDatasetSpecification(
 
     def to_dict(self):
         """Returns a dictionary for serialization to JSON.
-
         Each member is converted to an elementary type that can be serialized to
         JSON readily.
         """
@@ -700,10 +655,8 @@ class HierarchicalDatasetSpecification(
 
 def as_dataset_spec(dct):
     """Hook to `json.loads` that builds a DatasetSpecification from a dict.
-
     Args:
        dct: A dictionary with string keys, corresponding to a JSON file.
-
     Returns:
       Depending on the '__class__' key of the dictionary, a DatasetSpecification,
       HierarchicalDatasetSpecification, or BiLevelDatasetSpecification. Defaults
@@ -724,7 +677,7 @@ def as_dataset_spec(dct):
     def _key_to_split(dct):
         """Returns a new dictionary whith keys converted to Split enums."""
         return {
-            Split[key]: value for key, value in six.iteritems(dct)
+            learning_spec.Split[key]: value for key, value in six.iteritems(dct)
         }
 
     if dct['__class__'] == 'DatasetSpecification':
@@ -765,7 +718,7 @@ def as_dataset_spec(dct):
         # WordNet ID to Synset objects.
         split_subgraphs = {}
         wn_id_to_node = {}
-        for split in Split:
+        for split in learning_spec.Split:
             split_subgraphs[split] = imagenet_specification.import_graph(
                 dct['split_subgraphs'][split.name])
             for synset in split_subgraphs[split]:
@@ -781,7 +734,7 @@ def as_dataset_spec(dct):
                 wn_id_to_node[wn_id]: int(count)
                 for wn_id, count in six.iteritems(wn_id_counts)
             }
-            images_per_class[Split[split_name]] = synset_counts
+            images_per_class[learning_spec.Split[split_name]] = synset_counts
 
         return HierarchicalDatasetSpecification(
             name=dct['name'],
@@ -797,22 +750,18 @@ def as_dataset_spec(dct):
 
 def load_dataset_spec(dataset_records_path, convert_from_pkl=False):
     """Loads dataset specification from directory containing the dataset records.
-
     Newly-generated datasets have the dataset specification serialized as JSON,
     older ones have it as a .pkl file. If no JSON file is present and
     `convert_from_pkl` is passed, this method will load the .pkl and serialize it
     to JSON.
-
     Args:
       dataset_records_path: A string, the path to the directory containing
         .tfrecords files and dataset_spec.
       convert_from_pkl: A boolean (False by default), whether to convert a
         dataset_spec.pkl file to JSON.
-
     Returns:
       A DatasetSpecification, BiLevelDatasetSpecification, or
         HierarchicalDatasetSpecification, depending on the dataset.
-
     Raises:
       RuntimeError: If no suitable dataset_spec file is found in directory
         (.json or .pkl depending on `convert_from_pkl`).

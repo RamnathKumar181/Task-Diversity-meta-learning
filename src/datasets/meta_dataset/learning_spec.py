@@ -34,7 +34,6 @@ class Split(enum.Enum):
 class BatchSpecification(
         collections.namedtuple('BatchSpecification', 'split, batch_size')):
     """The specification of an episode.
-
       Args:
         split: the Split from which to pick data.
         batch_size: an int, the number of (image, label) pairs in the batch.
@@ -47,7 +46,6 @@ class EpisodeSpecification(
         'EpisodeSpecification',
         'split, num_classes, num_train_examples, num_test_examples')):
     """The specification of an episode.
-
       Args:
         split: A Split from which to pick data.
         num_classes: The number of classes in the episode, or None for variable.
