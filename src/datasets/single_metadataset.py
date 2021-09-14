@@ -1,17 +1,18 @@
 import os
 import torch
+import tensorflow.compat.v1 as tf
 
 from torchmeta.utils.data import CombinationMetaDataset, ClassDataset
 from collections import OrderedDict
 
-# from src.datasets.meta_dataset.utils import Split
-# from src.datasets.meta_dataset.loader import get_dataspecs
-# from src.datasets.meta_dataset.reader import Reader
-# from src.datasets.meta_dataset.pipeline import cycle_, parse_record
-# from src.datasets.meta_dataset.transform import get_transforms
+from src.datasets.meta_dataset.reader import Reader
+from src.datasets.meta_dataset.dataset_spec import load_dataset_spec
+from src.datasets.meta_dataset.learning_spec import Split
+from src.datasets.meta_dataset.decoder import ImageDecoder
+from src.datasets.metadataset import SOURCES, MetaDataset
 
 
-class SingleMetaDataset(CombinationMetaDataset):
+class SingleMetaDataset(MetaDataset):
     def __init__(
         self,
         root,
@@ -31,55 +32,19 @@ class SingleMetaDataset(CombinationMetaDataset):
         dataset = SingleMetaDatasetClassDataset(
             root,
             source,
-            num_ways,
-            num_shots,
-            num_shots_test,
             meta_train=meta_train,
             meta_val=meta_val,
             meta_test=meta_test,
-            meta_split=meta_split
+            meta_split=meta_split,
+            shuffle_buffer_size=1000,
         )
-        super().__init__(
+        CombinationMetaDataset.__init__(
+            self,
             dataset,
             num_ways,
             target_transform=None,
             dataset_transform=None
         )
-
-    def __getitem__(self, index):
-        support_images, query_images = [], []
-        support_tasks, query_tasks = [], []
-        targets = torch.randperm(self.num_ways).unsqueeze(1)
-
-        for class_id in index:
-            used_ids = set()
-            images = []
-            classes = []
-            while len(images) < self.num_shots + self.num_shots_test:
-                sample_dict = self.dataset._get_next(class_id)
-                if sample_dict['id'] in used_ids:
-                    continue
-                used_ids.add(sample_dict['id'])
-
-                sample_dict = parse_record(sample_dict)
-                images.append(self.dataset.transform(sample_dict['image']))
-                classes.append(class_id)
-
-            support_images.extend(images[:self.num_shots])
-            query_images.extend(images[self.num_shots:])
-            support_tasks.extend(classes[:self.num_shots])
-            query_tasks.extend(classes[self.num_shots:])
-
-        support_images = torch.stack(support_images, dim=0)
-        support_labels = targets.repeat((1, self.num_shots)).view(-1)
-
-        query_images = torch.stack(query_images, dim=0)
-        query_labels = targets.repeat((1, self.num_shots_test)).view(-1)
-
-        return OrderedDict([
-            ('train', (support_images, support_labels, support_tasks)),
-            ('test', (query_images, query_labels, query_tasks))
-        ])
 
 
 class SingleMetaDatasetClassDataset(ClassDataset):
@@ -87,13 +52,11 @@ class SingleMetaDatasetClassDataset(ClassDataset):
         self,
         root,
         source,
-        num_ways,
-        num_shots,
-        num_shots_test,
         meta_train=False,
         meta_val=False,
         meta_test=False,
-        meta_split=None
+        meta_split=None,
+        shuffle_buffer_size=None
     ):
         self.root = os.path.expanduser(os.path.join(root, source))
         self.source = source
@@ -104,10 +67,6 @@ class SingleMetaDatasetClassDataset(ClassDataset):
             meta_split=meta_split,
             class_augmentations=None
         )
-
-        dataset_spec, data_config, _ = get_dataspecs(
-            self.root, num_ways, num_shots, num_shots_test, source
-        )
         if self.meta_train:
             split = Split.TRAIN
         elif self.meta_val:
@@ -116,25 +75,37 @@ class SingleMetaDatasetClassDataset(ClassDataset):
             split = Split.TEST
         else:
             raise ValueError('Unknown split')
+        if source not in SOURCES[self.meta_split]:
+            raise ValueError(f'The source `{source}` is not in the list of '
+                f'sources for the `{self.meta_split}` split: '
+                f'{SOURCES[self.meta_split]}')
 
-        self.episode_reader = Reader(dataset_spec=dataset_spec,
-                                     split=split,
-                                     shuffle=data_config.shuffle,
-                                     offset=0)
-        self._class_datasets = self.episode_reader.construct_class_datasets()
-        self.transform = get_transforms(data_config, split)
+        image_decoder = ImageDecoder(image_size=84, data_augmentation=None)
+        def image_decode(example_string, source_id):
+            image = image_decoder(example_string)
+            return tf.transpose(image, (2, 0, 1))
+
+        dataset_spec = load_dataset_spec(self.root)
+        reader = Reader(
+            dataset_spec,
+            split=split,
+            shuffle_buffer_size=shuffle_buffer_size,
+            read_buffer_size_bytes=None,
+            num_prefetch=0,
+            num_to_take=-1,
+            num_unique_descriptions=0
+        )
+        class_datasets = reader.construct_class_datasets()
+        class_datasets = [dataset.map(image_decode) for dataset in class_datasets]
+        self._class_datasets = [dataset.as_numpy_iterator()
+                for dataset in class_datasets]
 
     def __getitem__(self, index):
         return self._class_datasets[index]
 
     def _get_next(self, index):
-        try:
-            sample_dict = next(self[index])
-        except (StopIteration, TypeError):
-            self._class_datasets[index] = cycle_(self[index])
-            sample_dict = next(self[index])
-        return sample_dict
+        return next(self[index])
 
     @property
     def num_classes(self):
-        return self.episode_reader.num_classes
+        return len(self._class_datasets)
