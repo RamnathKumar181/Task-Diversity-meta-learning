@@ -169,7 +169,7 @@ if [ $SLURM_ARRAY_TASK_ID -eq 0 ]; then
     fi
     cp -r $RECORDS ./data/meta_dataset/
     cp -r $SPLITS ./data/meta_dataset/
-    echo "Successfully downloaded ilscrc_2012"
+    echo "Successfully downloaded ilsvrc_2012"
 fi
 
 # omniglot
