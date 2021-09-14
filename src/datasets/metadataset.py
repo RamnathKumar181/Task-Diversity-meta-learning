@@ -76,11 +76,10 @@ class MetaDataset(CombinationMetaDataset):
         tasks = torch.tensor(index).unsqueeze(1)
 
         for class_id in index:
-            used_ids = set()
             images = []
             while len(images) < self.num_shots + self.num_shots_test:
                 image = self.dataset._get_next(class_id)
-                images.append(image)
+                images.append(torch.from_numpy(image))
 
             support_images.extend(images[:self.num_shots])
             query_images.extend(images[self.num_shots:])
@@ -134,7 +133,7 @@ class MetaDatasetClassDataset(ClassDataset):
 
         self._class_datasets = []
         for name in self.sources:
-            dataset_records_path = os.path.join(self.data_path, name)
+            dataset_records_path = os.path.join(self.root, name)
             dataset_spec = load_dataset_spec(dataset_records_path)
 
             reader = Reader(
