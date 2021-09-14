@@ -35,7 +35,17 @@ SOURCES = {
         'vgg_flower',
         'mscoco'
     ],
-    'test': []  # TODO
+    'test': [
+        'ilsvrc_2012',
+        'omniglot',
+        'aircraft',
+        'cu_birds',
+        'dtd',
+        'quickdraw',
+        'fungi',
+        'vgg_flower',
+        'mscoco'
+    ]
 }
 
 
