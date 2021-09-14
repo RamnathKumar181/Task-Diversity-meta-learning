@@ -10,8 +10,6 @@ from bisect import bisect_right
 from src.datasets.meta_dataset.reader import Reader
 from src.datasets.meta_dataset.dataset_spec import load_dataset_spec
 from src.datasets.meta_dataset.learning_spec import Split
-from src.datasets.meta_dataset.config import EpisodeDescriptionConfig
-from src.datasets.meta_dataset.sampling import EpisodeDescriptionSampler
 from src.datasets.meta_dataset.decoder import ImageDecoder
 
 
@@ -45,7 +43,6 @@ class MetaDataset(CombinationMetaDataset):
     def __init__(
         self,
         root,
-        source,
         num_ways,
         num_shots,
         num_shots_test,
