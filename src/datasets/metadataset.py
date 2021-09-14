@@ -42,13 +42,12 @@ class MetaDataset(CombinationMetaDataset):
 
     def __getitem__(self, index):
         support_images, query_images = [], []
-        support_tasks, query_tasks = [], []
         targets = torch.randperm(self.num_ways).unsqueeze(1)
+        tasks = torch.tensor(index).unsqueeze(1)
 
         for class_id in index:
             used_ids = set()
             images = []
-            classes = []
             while len(images) < self.num_shots + self.num_shots_test:
                 sample_dict = self.dataset._get_next(class_id)
                 if sample_dict['id'] in used_ids:
@@ -57,18 +56,17 @@ class MetaDataset(CombinationMetaDataset):
 
                 sample_dict = parse_record(sample_dict)
                 images.append(self.dataset.transform(sample_dict['image']))
-                classes.append(class_id)
 
             support_images.extend(images[:self.num_shots])
             query_images.extend(images[self.num_shots:])
-            support_tasks.extend(classes[:self.num_shots])
-            query_tasks.extend(classes[self.num_shots:])
 
         support_images = torch.stack(support_images, dim=0)
         support_labels = targets.repeat((1, self.num_shots)).view(-1)
+        support_tasks = tasks.repeat((1, self.num_shots)).view(-1)
 
         query_images = torch.stack(query_images, dim=0)
         query_labels = targets.repeat((1, self.num_shots_test)).view(-1)
+        query_tasks = tasks.repeat((1, self.num_shots_test)).view(-1)
 
         return OrderedDict([
             ('train', (support_images, support_labels, support_tasks)),
