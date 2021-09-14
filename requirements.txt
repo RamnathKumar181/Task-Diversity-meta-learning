@@ -13,3 +13,5 @@ torchmeta==1.7.0
 torchvision==0.8.2
 typing-extensions==3.7.4.3
 wandb==0.11.2
+higher
+gin-config==0.4.0
