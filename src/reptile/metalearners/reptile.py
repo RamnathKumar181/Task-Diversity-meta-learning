@@ -91,7 +91,8 @@ class Reptile(object):
     def __init__(self, model, optimizer=None, step_size=0.1, outer_step_size=0.001, first_order=False,
                  learn_step_size=False, per_param_step_size=False,
                  num_adaptation_steps=1, scheduler=None,
-                 loss_function=F.cross_entropy, device=None, lr=0.001, meta_optimizer=None, ohtm=False, batch_size=4):
+                 loss_function=F.cross_entropy, device=None, lr=0.001, meta_optimizer=None,
+                 ohtm=False, batch_size=4, log_test_tasks=False):
         self.model = model.to(device=device)
         self.optimizer = optimizer
         self.step_size = step_size
@@ -104,8 +105,11 @@ class Reptile(object):
         self.loss_function = loss_function
         self.device = device
         self.ohtm = ohtm
+        self.log_test_tasks = log_test_tasks
         if self.ohtm:
             self.hardest_task = OrderedDict()
+        if self.log_test_tasks:
+            self.test_task_performance = OrderedDict()
         self.outer_step_size = outer_step_size
         if per_param_step_size:
             self.step_size = OrderedDict((name, torch.tensor(step_size,
@@ -170,6 +174,9 @@ class Reptile(object):
                     if self.ohtm and train:
                         self.hardest_task[str(task.cpu().tolist())
                                           ] = get_accuracy(test_logit, test_target).item()
+                    if self.log_test_tasks and not train:
+                        self.test_task_performance[str(task.cpu().tolist())
+                                                   ] = get_accuracy(test_logit, test_target).item()
 
                 if train:
                     outer_grad = []
@@ -212,21 +219,20 @@ class Reptile(object):
         return loss, acc, grad
 
     @torch.no_grad()
-    def valid(self, dataloader):
+    def valid(self, dataloader, max_batches=150):
 
         loss_list = []
         acc_list = []
-        with tqdm(dataloader, total=150) as pbar:
+        with tqdm(dataloader, total=max_batches) as pbar:
             for batch_idx, batch in enumerate(pbar):
-
+                if batch_idx >= max_batches:
+                    break
                 loss_log, acc_log = self.outer_loop(batch, train=False)
 
                 loss_list.append(loss_log)
                 acc_list.append(acc_log)
                 pbar.set_description('loss = {:.4f} || acc={:.4f}'.format(
                     np.mean(loss_list), np.mean(acc_list)))
-                if batch_idx >= 150:
-                    break
 
         loss = np.round(np.mean(loss_list), 4)
         acc = np.round(np.mean(acc_list), 4)

@@ -157,6 +157,7 @@ def test_model(args, dataset_name=None):
         config['verbose'] = args.verbose
         config['train'] = args.train
         config['dataset_test'] = args.dataset
+        config['log_test_tasks'] = args.log_test_tasks
         wandb.init(project='Task_Diversity', config=config, name=config['exp_name'],
                    settings=wandb.Settings(start_method='thread'), reinit=False)
         wandb.config = config

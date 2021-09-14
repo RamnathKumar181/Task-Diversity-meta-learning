@@ -156,7 +156,7 @@ class MetaOptNet(object):
                 loss, results = self.get_loss(batch, train=True)
                 self.optimizer.step()
                 if self.scheduler is not None:
-                    self.scheduler.step(epoch=num_batches)
+                    self.scheduler.step()
                 yield results
                 num_batches += 1
 

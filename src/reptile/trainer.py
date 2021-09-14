@@ -1,6 +1,6 @@
 import wandb
 from src.datasets.task_sampler import BatchMetaDataLoader as BMD
-from src.utils import get_benchmark_by_name
+from src.utils import get_benchmark_by_name, seed_everything
 from src.reptile.metalearners import Reptile
 import torch
 import logging
@@ -212,11 +212,20 @@ class ReptileTester():
                                                test_dataset=self.config['dataset_test'],
                                                use_augmentations=self.config['use_augmentations'])
 
-        self.meta_test_dataloader = BMD(self.benchmark.meta_test_dataset,
-                                        batch_size=self.config['batch_size'],
-                                        shuffle=True,
-                                        num_workers=self.config['num_workers'],
-                                        pin_memory=True)
+        if self.config['log_test_tasks']:
+            seed_everything()
+            self.meta_test_dataloader = BMD(self.benchmark.meta_test_dataset,
+                                            batch_size=self.config['batch_size'],
+                                            shuffle=True,
+                                            num_workers=0,
+                                            pin_memory=True)
+
+        else:
+            self.meta_test_dataloader = BMD(self.benchmark.meta_test_dataset,
+                                            batch_size=self.config['batch_size'],
+                                            shuffle=True,
+                                            num_workers=self.config['num_workers'],
+                                            pin_memory=True)
 
         self.optimizer = torch.optim.SGD(self.benchmark.model.parameters(),
                                          lr=self.config['lr'])
@@ -236,12 +245,13 @@ class ReptileTester():
                                    loss_function=self.benchmark.loss_function,
                                    meta_optimizer=self.meta_optimizer,
                                    device=self.device,
-                                   batch_size=self.config['batch_size'])
+                                   batch_size=self.config['batch_size'],
+                                   log_test_tasks=self.config['log_test_tasks'])
 
-    def run_epoch(self, epoch):
+    def run_epoch(self, epoch, max_batches):
 
         res = OrderedDict()
-        loss_log, acc_log = self.metalearner.valid(self.meta_test_dataloader)
+        loss_log, acc_log = self.metalearner.valid(self.meta_test_dataloader, max_batches)
         res['epoch'] = epoch
         res['test_loss'] = loss_log
         res['test_acc'] = acc_log
@@ -251,9 +261,16 @@ class ReptileTester():
         return res, is_best
 
     def _test(self):
-        res, is_best = self.run_epoch(0)
-
         dirname = os.path.dirname(self.config['model_path'])
+        if self.config['log_test_tasks']:
+            res, _ = self.run_epoch(0, max_batches=1024/self.config['batch_size'])
+            self.metalearner.test_task_performance['total'] = sum(list(
+                self.metalearner.test_task_performance.values()))/len(list(self.metalearner.test_task_performance.values()))
+            print(f"First 10 tasks: {list(self.metalearner.test_task_performance.keys())[:10]}")
+            with open(os.path.join(dirname, 'task_performance.json'), 'w') as f:
+                json.dump(str(self.metalearner.test_task_performance.items()), f, indent=2)
+        else:
+            res, _ = self.run_epoch(0, max_batches=self.config['num_batches'])
         with open(os.path.join(dirname, 'results.json'), 'w') as f:
             json.dump(res, f)
 
