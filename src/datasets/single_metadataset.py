@@ -4,11 +4,11 @@ import torch
 from torchmeta.utils.data import CombinationMetaDataset, ClassDataset
 from collections import OrderedDict
 
-from src.datasets.meta_dataset.utils import Split
-from src.datasets.meta_dataset.loader import get_dataspecs
-from src.datasets.meta_dataset.reader import Reader
-from src.datasets.meta_dataset.pipeline import cycle_, parse_record
-from src.datasets.meta_dataset.transform import get_transforms
+# from src.datasets.meta_dataset.utils import Split
+# from src.datasets.meta_dataset.loader import get_dataspecs
+# from src.datasets.meta_dataset.reader import Reader
+# from src.datasets.meta_dataset.pipeline import cycle_, parse_record
+# from src.datasets.meta_dataset.transform import get_transforms
 
 
 class SingleMetaDataset(CombinationMetaDataset):

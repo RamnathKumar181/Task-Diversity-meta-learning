@@ -25,9 +25,9 @@ import json
 import os
 
 from absl import logging
-from src.dataset import meta_dataset as data
-from src.dataset.meta_dataset import imagenet_specification
-from src.dataset.meta_dataset import learning_spec
+from src.datasets import meta_dataset as data
+from src.datasets.meta_dataset import imagenet_specification
+from src.datasets.meta_dataset import learning_spec
 import numpy as np
 import six
 from six.moves import cPickle as pkl

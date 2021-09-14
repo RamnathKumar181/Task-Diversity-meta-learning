@@ -57,38 +57,64 @@ class ReptileTrainer():
                                                hidden_size=self.args.hidden_size)
         if self.args.task_sampler == 'no_diversity_task':
             logging.info("Using no_diversity_task sampler:\n\n")
-            from src.task_sampler import BatchMetaDataLoaderNDT as BMD_NDT
+            from src.datasets.task_sampler import BatchMetaDataLoaderNDT as BMD_NDT
             self.meta_train_dataloader = BMD_NDT(self.benchmark.meta_train_dataset,
                                                  batch_size=self.args.batch_size,
-                                                 shuffle=True,
+                                                 shuffle=False if self.args.dataset == "meta_dataset" else True,
                                                  num_workers=self.args.num_workers,
                                                  pin_memory=True)
         elif self.args.task_sampler == 'no_diversity_batch':
             logging.info("Using no_diversity_batch sampler:\n\n")
-            from src.task_sampler import BatchMetaDataLoaderNDB as BMD_NDB
+            from src.datasets.task_sampler import BatchMetaDataLoaderNDB as BMD_NDB
             self.meta_train_dataloader = BMD_NDB(self.benchmark.meta_train_dataset,
                                                  batch_size=self.args.batch_size,
-                                                 shuffle=True,
+                                                 shuffle=False if self.args.dataset == "meta_dataset" else True,
                                                  num_workers=self.args.num_workers,
                                                  pin_memory=True)
         elif self.args.task_sampler == 'no_diversity_tasks_per_batch':
             logging.info("Using no_diversity_tasks_per_batch sampler:\n\n")
-            from src.task_sampler import BatchMetaDataLoaderNDTB as BMD_NDTB
+            from src.datasets.task_sampler import BatchMetaDataLoaderNDTB as BMD_NDTB
             self.meta_train_dataloader = BMD_NDTB(self.benchmark.meta_train_dataset,
                                                   batch_size=self.args.batch_size,
-                                                  shuffle=True,
+                                                  shuffle=False if self.args.dataset == "meta_dataset" else True,
                                                   num_workers=self.args.num_workers,
                                                   pin_memory=True)
+        elif self.args.task_sampler == 'ohtm':
+            logging.info("Using online hardest task mining sampler:\n\n")
+            from src.datasets.task_sampler import OHTM
+            self.meta_train_dataloader = OHTM(self.benchmark.meta_train_dataset,
+                                              batch_size=self.args.batch_size,
+                                              shuffle=False if self.args.dataset == "meta_dataset" else True,
+                                              num_workers=self.args.num_workers,
+                                              pin_memory=True)
+        elif self.args.task_sampler == 's-DPP':
+            logging.info("Using Static DPP task sampler:\n\n")
+            from src.datasets.task_sampler import sDPP
+            self.meta_train_dataloader = sDPP(self.benchmark.meta_train_dataset,
+                                              batch_size=self.args.batch_size,
+                                              shuffle=False if self.args.dataset == "meta_dataset" else True,
+                                              num_workers=self.args.num_workers,
+                                              pin_memory=True,
+                                              dataset_name=self.args.dataset)
+        elif self.args.task_sampler == 'd-DPP':
+            logging.info("Using Dynamic DPP task sampler:\n\n")
+            from src.datasets.task_sampler import dDPP
+            self.meta_train_dataloader = dDPP(self.benchmark.meta_train_dataset,
+                                              batch_size=self.args.batch_size,
+                                              shuffle=False if self.args.dataset == "meta_dataset" else True,
+                                              num_workers=self.args.num_workers,
+                                              pin_memory=True,
+                                              model_name=self.args.model)
         else:
             logging.info("Using uniform_task sampler:\n\n")
             self.meta_train_dataloader = BMD(self.benchmark.meta_train_dataset,
                                              batch_size=self.args.batch_size,
-                                             shuffle=True,
+                                             shuffle=False if self.args.dataset == "meta_dataset" else True,
                                              num_workers=self.args.num_workers,
                                              pin_memory=True)
         self.meta_val_dataloader = BMD(self.benchmark.meta_val_dataset,
                                        batch_size=self.args.batch_size,
-                                       shuffle=True,
+                                       shuffle=False if self.args.dataset == "meta_dataset" else True,
                                        num_workers=self.args.num_workers,
                                        pin_memory=True)
 
@@ -108,7 +134,12 @@ class ReptileTrainer():
                                    loss_function=self.benchmark.loss_function,
                                    meta_optimizer=self.meta_optimizer,
                                    device=self.device,
-                                   batch_size=self.args.batch_size)
+                                   batch_size=self.args.batch_size,
+                                   ohtm=self.args.task_sampler == 'ohtm')
+
+        if self.args.task_sampler in ['ohtm', 'd-DPP']:
+            logging.info("Initialized metalearner in dataloader:\n\n")
+            self.meta_train_dataloader.init_metalearner(self.metalearner)
 
     def run_epoch(self, epoch):
 
@@ -123,12 +154,11 @@ class ReptileTrainer():
         res['valid_loss'] = valid_loss
         res['valid_acc'] = valid_acc
 
-        is_best = False
         if res['valid_acc'] > self.highest_val:
             self.highest_val = res['valid_acc']
-            is_best = True
-
-        return res, is_best
+            return res, True
+        else:
+            return res, False
 
     def _train(self):
         for epoch in range(self.args.num_epochs):
@@ -136,7 +166,6 @@ class ReptileTrainer():
             wandb.log({"Accuracy": res['valid_acc']})
             # Save best model
             if is_best:
-                self.highest_val = res['valid_acc']
                 save_model = True
             else:
                 save_model = False
@@ -178,7 +207,10 @@ class ReptileTester():
                                                self.config['num_ways'],
                                                self.config['num_shots'],
                                                self.config['num_shots_test'],
-                                               hidden_size=self.config['hidden_size'])
+                                               image_size=self.config['image_size'],
+                                               hidden_size=self.config['hidden_size'],
+                                               test_dataset=self.config['dataset_test'],
+                                               use_augmentations=self.config['use_augmentations'])
 
         self.meta_test_dataloader = BMD(self.benchmark.meta_test_dataset,
                                         batch_size=self.config['batch_size'],
@@ -186,29 +218,37 @@ class ReptileTester():
                                         num_workers=self.config['num_workers'],
                                         pin_memory=True)
 
+        self.optimizer = torch.optim.SGD(self.benchmark.model.parameters(),
+                                         lr=self.config['lr'])
+        self.meta_optimizer = torch.optim.Adam(self.benchmark.model.parameters(),
+                                               lr=self.config['meta_lr'])
+
         with open(self.config['model_path'], 'rb') as f:
             self.benchmark.model.load_state_dict(torch.load(f, map_location=self.device))
 
     def _build_metalearner(self):
 
         self.metalearner = Reptile(self.benchmark.model,
+                                   self.optimizer,
                                    first_order=self.config['first_order'],
                                    num_adaptation_steps=self.config['num_steps'],
                                    step_size=self.config['step_size'],
                                    loss_function=self.benchmark.loss_function,
+                                   meta_optimizer=self.meta_optimizer,
                                    device=self.device,
                                    batch_size=self.config['batch_size'])
 
     def run_epoch(self, epoch):
 
         res = OrderedDict()
-        print('Epoch {}'.format(epoch))
         loss_log, acc_log = self.metalearner.valid(self.meta_test_dataloader)
         res['epoch'] = epoch
         res['test_loss'] = loss_log
         res['test_acc'] = acc_log
 
-        return res
+        is_best = False
+
+        return res, is_best
 
     def _test(self):
         res, is_best = self.run_epoch(0)

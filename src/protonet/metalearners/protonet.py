@@ -46,7 +46,7 @@ class PrototypicalNetwork(object):
     """
 
     def __init__(self, model, optimizer=None, scheduler=None,
-                 loss_function=prototypical_loss, device=None, num_ways=None, ohtm=False):
+                 loss_function=prototypical_loss, device=None, num_ways=None, ohtm=False, log_test_tasks=False):
         self.model = model.to(device=device)
         self.optimizer = optimizer
         self.scheduler = scheduler
@@ -54,8 +54,11 @@ class PrototypicalNetwork(object):
         self.device = device
         self.num_ways = num_ways
         self.ohtm = ohtm
+        self.log_test_tasks = log_test_tasks
         if self.ohtm:
             self.hardest_task = OrderedDict()
+        if self.log_test_tasks:
+            self.test_task_performance = OrderedDict()
 
     def get_loss(self, batch, train=False):
         if 'test' not in batch:
@@ -93,6 +96,10 @@ class PrototypicalNetwork(object):
         if self.ohtm and train:
             for task_id, (_, _, task) in enumerate(zip(*batch['train'])):
                 self.hardest_task[str(task.cpu().tolist())] = torch.mean(accuracy[task_id]).item()
+        if self.log_test_tasks and not train:
+            for task_id, (_, _, task) in enumerate(zip(*batch['train'])):
+                self.test_task_performance[str(task.cpu().tolist())
+                                           ] = torch.mean(accuracy[task_id]).item()
 
         mean_loss.div_(num_tasks)
         results['mean_loss'] = loss.item()

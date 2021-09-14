@@ -4,7 +4,7 @@ import os
 import logging
 import torch
 from src.matching_networks.metalearners import MatchingNetwork
-from src.utils import get_benchmark_by_name
+from src.utils import get_benchmark_by_name, seed_everything
 from src.datasets.task_sampler import BatchMetaDataLoader as BMD
 import wandb
 
@@ -202,11 +202,20 @@ class MatchingNetworksTester():
                                                use_augmentations=self.config['use_augmentations'],
                                                test_dataset=self.config['dataset_test'])
 
-        self.meta_test_dataloader = BMD(self.benchmark.meta_test_dataset,
-                                        batch_size=self.config['batch_size'],
-                                        shuffle=True,
-                                        num_workers=self.config['num_workers'],
-                                        pin_memory=True)
+        if self.config['log_test_tasks']:
+            seed_everything()
+            self.meta_test_dataloader = BMD(self.benchmark.meta_test_dataset,
+                                            batch_size=self.config['batch_size'],
+                                            shuffle=True,
+                                            num_workers=0,
+                                            pin_memory=True)
+
+        else:
+            self.meta_test_dataloader = BMD(self.benchmark.meta_test_dataset,
+                                            batch_size=self.config['batch_size'],
+                                            shuffle=True,
+                                            num_workers=self.config['num_workers'],
+                                            pin_memory=True)
 
         with open(self.config['model_path'], 'rb') as f:
             self.benchmark.model.load_state_dict(torch.load(f, map_location=self.device))
@@ -218,14 +227,26 @@ class MatchingNetworksTester():
                                            step_size=self.config['step_size'],
                                            loss_function=self.benchmark.loss_function,
                                            device=self.device,
-                                           num_ways=self.config['num_ways'])
+                                           num_ways=self.config['num_ways'],
+                                           log_test_tasks=self.config['log_test_tasks'])
 
     def _test(self):
-        results = self.metalearner.evaluate(self.meta_test_dataloader,
-                                            max_batches=self.config['num_batches'],
-                                            verbose=self.config['verbose'],
-                                            desc='Testing')
         dirname = os.path.dirname(self.config['model_path'])
+        if self.config['log_test_tasks']:
+            results = self.metalearner.evaluate(self.meta_test_dataloader,
+                                                max_batches=1024/self.config['batch_size'],
+                                                verbose=self.config['verbose'],
+                                                desc='Testing')
+            self.metalearner.test_task_performance['total'] = sum(list(
+                self.metalearner.test_task_performance.values()))/len(list(self.metalearner.test_task_performance.values()))
+            print(f"First 10 tasks: {list(self.metalearner.test_task_performance.keys())[:10]}")
+            with open(os.path.join(dirname, 'task_performance.json'), 'w') as f:
+                json.dump(str(self.metalearner.test_task_performance.items()), f, indent=2)
+        else:
+            results = self.metalearner.evaluate(self.meta_test_dataloader,
+                                                max_batches=self.config['num_batches'],
+                                                verbose=self.config['verbose'],
+                                                desc='Testing')
         with open(os.path.join(dirname, 'results.json'), 'w') as f:
             json.dump(results, f)
 

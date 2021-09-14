@@ -48,7 +48,7 @@ class MatchingNetwork(object):
                  learn_step_size=False, per_param_step_size=False,
                  num_adaptation_steps=1, scheduler=None,
                  loss_function=F.cross_entropy, device=None, num_ways=None,
-                 num_shots=None, num_shots_test=None, ohtm=False):
+                 num_shots=None, num_shots_test=None, ohtm=False, log_test_tasks=False):
         self.model = model.to(device=device)
         self.optimizer = optimizer
         self.step_size = step_size
@@ -61,8 +61,11 @@ class MatchingNetwork(object):
         self.num_shots_test = num_shots_test
         self.model.to(device=self.device)
         self.ohtm = ohtm
+        self.log_test_tasks = log_test_tasks
         if self.ohtm:
             self.hardest_task = OrderedDict()
+        if self.log_test_tasks:
+            self.test_task_performance = OrderedDict()
         if per_param_step_size:
             self.step_size = OrderedDict((name, torch.tensor(step_size,
                                                              dtype=param.dtype, device=self.device,
@@ -116,7 +119,10 @@ class MatchingNetwork(object):
         if self.ohtm and train:
             for task_id, (_, _, task) in enumerate(zip(*batch['train'])):
                 self.hardest_task[str(task.cpu().tolist())] = torch.mean(accuracy[task_id]).item()
-
+        if self.log_test_tasks and not train:
+            for task_id, (_, _, task) in enumerate(zip(*batch['train'])):
+                self.test_task_performance[str(task.cpu().tolist())
+                                           ] = torch.mean(accuracy[task_id]).item()
         mean_loss.div_(num_tasks)
         results['mean_loss'] = mean_loss.item()
 

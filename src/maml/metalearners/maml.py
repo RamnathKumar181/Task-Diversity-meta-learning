@@ -55,7 +55,7 @@ class ModelAgnosticMetaLearning(object):
     def __init__(self, model, optimizer=None, step_size=0.1, first_order=False,
                  learn_step_size=False, per_param_step_size=False,
                  num_adaptation_steps=1, scheduler=None,
-                 loss_function=F.cross_entropy, device=None, ohtm=False):
+                 loss_function=F.cross_entropy, device=None, ohtm=False, log_test_tasks=False):
         self.model = model.to(device=device)
         self.optimizer = optimizer
         self.step_size = step_size
@@ -66,8 +66,11 @@ class ModelAgnosticMetaLearning(object):
         self.device = device
         self.model.to(device=self.device)
         self.ohtm = ohtm
+        self.log_test_tasks = log_test_tasks
         if self.ohtm:
             self.hardest_task = OrderedDict()
+        if self.log_test_tasks:
+            self.test_task_performance = OrderedDict()
         if per_param_step_size:
             self.step_size = OrderedDict((name, torch.tensor(step_size,
                                                              dtype=param.dtype, device=self.device,
@@ -134,6 +137,10 @@ class ModelAgnosticMetaLearning(object):
                     test_logits, test_targets)
             if self.ohtm and train:
                 self.hardest_task[str(task.cpu().tolist())] = results['accuracies_after'][task_id]
+
+            if self.log_test_tasks and not train:
+                self.test_task_performance[str(task.cpu().tolist())
+                                           ] = results['accuracies_after'][task_id]
 
         mean_outer_loss.div_(num_tasks)
         results['mean_outer_loss'] = mean_outer_loss.item()

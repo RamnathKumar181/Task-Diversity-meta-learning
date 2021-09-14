@@ -190,16 +190,18 @@ class dDPP(object):
                             task_embedding[str(index.item())] = np.array(
                                 prototypes[task_id][class_id].cpu().tolist())
                 elif self.model_name == 'metaoptnet':
-                    train_inputs, train_targets, tasks = batch['train']
-                    _, _, train_embeddings = self.metalearner.model(
-                        train_inputs.to(device=self.device), train_targets.to(device=self.device),
-                        train_inputs.to(device=self.device), train_targets.to(device=self.device))
-                    prototypes = get_prototypes(train_embeddings.to(
-                        device='cpu'), train_targets, self.num_ways)
-                    for task_id, task in enumerate(tasks):
+                    for task_id, (train_inputs, train_targets, task) \
+                            in enumerate(zip(*batch['train'])):
+                        _, _, prototypes = self.metalearner.model(
+                            train_inputs.to(device=self.device), train_targets.to(
+                                device=self.device),
+                            train_inputs.to(device=self.device), train_targets.to(device=self.device))
+                        print(prototypes.size())
+                        # prototypes = get_prototypes(train_embeddings.to(
+                        #     device='cpu'), train_targets, self.num_ways)
                         for class_id, index in enumerate(task):
                             task_embedding[str(index.item())] = np.array(
-                                prototypes[task_id][class_id].cpu().tolist())
+                                prototypes[class_id].cpu().tolist())
                 elif self.model_name in ['maml', 'reptile']:
                     for task_id, (train_inputs, train_targets, task) \
                             in enumerate(zip(*batch['train'])):

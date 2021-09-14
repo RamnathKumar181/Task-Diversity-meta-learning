@@ -13,16 +13,6 @@ from src.cnaps import CNAPTrainer, CNAPTester
 from src.metaoptnet import MetaOptNetTrainer, MetaOptNetTester
 import wandb
 
-# Implementing meta-dataset:
-#
-# from torchmeta.utils.data import MetaDataLoader
-# from torch.utils.data.dataloader import default_collate
-#
-# from src.datasets.metadataset import MetaDataset
-#
-# dataset = MetaDataset(folder, source='ilsvrc_2012', num_ways=5, num_shots=5, num_shots_test=15, meta_train=True)
-# dataloader = MetaDataLoader(dataset, batch_size=4, collate_fn=default_collate)
-
 
 def parse_args():
     """
@@ -126,6 +116,7 @@ def parse_args():
     parser.add_argument('--exp_name', type=str, default=None,
                         help='Experiment name'
                         '(default: None).')
+    parser.add_argument('--log-test-tasks', action='store_true')
 
     args = parser.parse_args()
 
@@ -205,8 +196,7 @@ def test_model(args, dataset_name=None):
             """
             mon_tester = MetaOptNetTester(config)
             log.add_result(run, mon_tester.get_result())
-    return log
-    if args.dataset_name is not None:
+    if dataset_name is not None:
         print(f"Average Performance of {config['model']} on {args.dataset}/{dataset_name}:")
     else:
         print(f"Average Performance of {config['model']} on {args.dataset}:")

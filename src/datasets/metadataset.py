@@ -4,12 +4,6 @@ import torch
 from torchmeta.utils.data import CombinationMetaDataset, ClassDataset
 from collections import OrderedDict
 
-from src.datasets.meta_dataset.utils import Split
-from src.datasets.meta_dataset.loader import get_dataspecs
-from src.datasets.meta_dataset.reader import Reader
-from src.datasets.meta_dataset.pipeline import cycle_, parse_record
-from src.datasets.meta_dataset.transform import get_transforms
-
 
 class MetaDataset(CombinationMetaDataset):
     def __init__(
@@ -105,9 +99,7 @@ class MetaDatasetClassDataset(ClassDataset):
             class_augmentations=None
         )
 
-        dataset_spec, data_config, _ = get_dataspecs(
-            self.root, num_ways, num_shots, num_shots_test, source
-        )
+        dataset_spec, data_config, _ = [], [], []
         if self.meta_train:
             split = Split.TRAIN
         elif self.meta_val:

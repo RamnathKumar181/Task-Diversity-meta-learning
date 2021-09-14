@@ -48,7 +48,7 @@ class MetaOptNet(object):
                  learn_step_size=False, per_param_step_size=False,
                  num_adaptation_steps=1, scheduler=None,
                  loss_function=torch.nn.CrossEntropyLoss(), device=None, num_ways=None,
-                 num_shots=None, num_shots_test=None, ohtm=False):
+                 num_shots=None, num_shots_test=None, ohtm=False, log_test_tasks=False):
         self.model = model.to(device=device)
         self.optimizer = optimizer
         self.step_size = step_size
@@ -60,8 +60,11 @@ class MetaOptNet(object):
         self.num_shots = num_shots
         self.num_shots_test = num_shots_test
         self.ohtm = ohtm
+        self.log_test_tasks = log_test_tasks
         if self.ohtm:
             self.hardest_task = OrderedDict()
+        if self.log_test_tasks:
+            self.test_task_performance = OrderedDict()
         if per_param_step_size:
             self.step_size = OrderedDict((name, torch.tensor(step_size,
                                                              dtype=param.dtype, device=self.device,
@@ -115,6 +118,10 @@ class MetaOptNet(object):
 
             if self.ohtm and train:
                 self.hardest_task[str(task.cpu().tolist())] = results['accuracies'][task_id]
+
+            if self.log_test_tasks and not train:
+                self.test_task_performance[str(task.cpu().tolist())
+                                           ] = results['accuracies'][task_id]
 
         mean_loss.div_(num_tasks)
         results['mean_loss'] = mean_loss.item()
