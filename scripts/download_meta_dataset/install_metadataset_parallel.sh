@@ -2,10 +2,10 @@
 #SBATCH --job-name=install_meta_dataset
 #SBATCH --output=../logs/install_meta_dataset_%a.out
 #SBATCH --error=../logs/install_meta_dataset_%a.err
-#SBATCH --gres=gpu:0
+#SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=5G
-#SBATCH --array=0-9
+#SBATCH --array=0
 
 
 # NOTES:

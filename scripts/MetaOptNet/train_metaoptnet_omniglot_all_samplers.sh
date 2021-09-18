@@ -5,7 +5,7 @@
 #SBATCH --gres=gpu:2
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=20G
-#SBATCH --array=6
+#SBATCH --array=7
 
 source ../env/bin/activate
 cd ..
