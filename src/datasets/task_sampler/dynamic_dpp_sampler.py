@@ -78,8 +78,12 @@ class DPPSampler(RandomSampler):
                 yield tuple(random.sample(range(num_classes), num_classes_per_task))
         else:
             for _ in range(self.batch_size):
-                self.DPP.sample_exact_k_dpp(size=num_classes_per_task, random_state=self.rng)
-                yield tuple(self.DPP.list_of_samples[-1])
+                try:
+                    self.DPP.sample_exact_k_dpp(size=num_classes_per_task, random_state=self.rng)
+                    yield tuple(self.DPP.list_of_samples[-1])
+                except Exception as err:
+                    print(err)
+                    yield tuple(random.sample(range(num_classes), num_classes_per_task))
 
 
 class MetaDataLoader(DataLoader):
@@ -192,16 +196,15 @@ class dDPP(object):
                 elif self.model_name == 'metaoptnet':
                     for task_id, (train_inputs, train_targets, task) \
                             in enumerate(zip(*batch['train'])):
-                        _, _, prototypes = self.metalearner.model(
+                        train_inputs = train_inputs.to(device=self.device)
+                        train_targets = train_targets.to(device=self.device)
+                        prototypes = self.metalearner.model(
                             train_inputs.to(device=self.device), train_targets.to(
                                 device=self.device),
-                            train_inputs.to(device=self.device), train_targets.to(device=self.device))
-                        print(prototypes.size())
-                        # prototypes = get_prototypes(train_embeddings.to(
-                        #     device='cpu'), train_targets, self.num_ways)
+                            train_inputs.to(device=self.device), train_targets.to(device=self.device), dpp=True)
                         for class_id, index in enumerate(task):
                             task_embedding[str(index.item())] = np.array(
-                                prototypes[class_id].cpu().tolist())
+                                prototypes.squeeze(0)[class_id].cpu().tolist())
                 elif self.model_name in ['maml', 'reptile']:
                     for task_id, (train_inputs, train_targets, task) \
                             in enumerate(zip(*batch['train'])):

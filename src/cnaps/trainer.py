@@ -157,6 +157,7 @@ class CNAPTrainer():
     def _train(self):
         best_value = None
         for epoch in range(self.args.num_epochs):
+            logging.info("In training!")
             self.metalearner.train(self.meta_train_dataloader,
                                    max_batches=self.args.num_batches,
                                    verbose=self.args.verbose,
@@ -189,7 +190,7 @@ class CNAPTrainer():
         return tuple([self.highest_val])
 
     def _device(self):
-        return torch.device('cuda' if self.args.use_cuda
+        return torch.device('cuda:0' if self.args.use_cuda
                             and torch.cuda.is_available() else 'cpu')
 
 

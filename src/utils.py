@@ -9,11 +9,6 @@ from torchmeta.transforms import ClassSplitter, Categorical, Rotation
 from torchvision.transforms import ToTensor, Resize, Compose
 from torchvision import transforms
 
-from pathlib import Path
-from typing import Any, Tuple
-from src.datasets.meta_dataset import config as config_lib
-from src.datasets.meta_dataset import dataset_spec as dataset_spec_lib
-
 
 Benchmark = namedtuple('Benchmark', 'meta_train_dataset meta_val_dataset '
                        'meta_test_dataset model loss_function')
@@ -65,33 +60,7 @@ class ToTensor1D(object):
         return self.__class__.__name__ + '()'
 
 
-def get_dataspecs(folder, num_ways, num_shots, num_shots_test,
-                  source='ilsvrc_2012') -> Tuple[Any, Any, Any]:
-    # Recovering data
-    data_config = config_lib.DataConfig(path=folder)
-    episod_config = config_lib.EpisodeDescriptionConfig(num_ways, num_shots, num_shots_test)
-
-    use_bilevel_ontology = False
-    use_dag_ontology = False
-
-    # Enable ontology aware sampling for Omniglot and ImageNet.
-    if source == 'omniglot':
-        # use_bilevel_ontology_list[sources.index('omniglot')] = True
-        use_bilevel_ontology = True
-    if source == 'ilsvrc_2012':
-        use_dag_ontology = True
-
-    episod_config.use_bilevel_ontology = use_bilevel_ontology
-    episod_config.use_dag_ontology = use_dag_ontology
-
-    dataset_records_path: Path = data_config.path / source
-    # Original codes handles paths as strings:
-    dataset_spec = dataset_spec_lib.load_dataset_spec(str(dataset_records_path))
-
-    return dataset_spec, data_config, episod_config
-
-
-def init_metadataset_data(name, sub_dataset_name):
+def init_metadataset_data(name="meta-dataset", sub_dataset_name=None):
     if name == "meta-dataset":
         train_set = ['ilsvrc_2012', 'omniglot', 'aircraft',
                      'cu_birds', 'dtd', 'quickdraw', 'fungi', 'vgg_flower']
@@ -302,11 +271,9 @@ def get_benchmark_by_name(model_name,
         train_set, validation_set, test_set = init_metadataset_data()
         meta_train_dataset = MetaDataset(folder, num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,
                                          meta_train=True)
-        meta_val_dataset = MetaDataset(folder, source='ilsvrc_2012',
-                                       num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,
+        meta_val_dataset = MetaDataset(folder, num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,
                                        meta_val=True)
-        meta_test_dataset = MetaDataset(folder, source='ilsvrc_2012',
-                                        num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,
+        meta_test_dataset = MetaDataset(folder, num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,
                                         meta_test=True)
 
         if model_name == 'maml':
@@ -330,7 +297,7 @@ def get_benchmark_by_name(model_name,
                                num_ways, num_shots, num_shots_test)
             loss_function = torch.nn.NLLLoss
     elif name == 'single_meta_dataset':
-        train_set, validation_set, test_set = init_metadataset_data()
+        train_set, validation_set, test_set = init_metadataset_data(name, sub_dataset_name)
         meta_train_dataset = SingleMetaDataset(folder, source='ilsvrc_2012',
                                                num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,
                                                meta_train=True)

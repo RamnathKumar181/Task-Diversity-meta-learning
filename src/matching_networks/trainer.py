@@ -96,6 +96,7 @@ class MatchingNetworksTrainer():
                                               shuffle=False if self.args.dataset == "meta_dataset" else True,
                                               num_workers=self.args.num_workers,
                                               pin_memory=True,
+                                              num_ways=self.args.num_ways,
                                               model_name=self.args.model)
         elif self.args.task_sampler == 'ohtm':
             logging.info("Using online hardest task mining sampler:\n\n")

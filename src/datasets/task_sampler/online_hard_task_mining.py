@@ -100,7 +100,9 @@ class BatchMetaDataLoaderOHTM(MetaDataLoader):
 
 
 class OHTM(object):
-    def __init__(self, dataset, batch_size=32, shuffle=True, num_workers=1, pin_memory=True, hard_mining_threshold=32, buffer_threshold=50):
+    def __init__(self, dataset, batch_size=32, shuffle=True, num_workers=1,
+                 pin_memory=True, hard_mining_threshold=32, buffer_threshold=50,
+                 use_batch_collate=True):
         self.dataset = dataset
         self.batch_size = batch_size
         self.shuffle = shuffle
@@ -109,6 +111,7 @@ class OHTM(object):
         self.hard_mining_threshold = hard_mining_threshold
         self.buffer_threshold = buffer_threshold
         self.index = 0
+        self.use_batch_collate = use_batch_collate
 
     def init_metalearner(self, metalearner):
         self.metalearner = metalearner
@@ -139,6 +142,6 @@ class OHTM(object):
                                              batch_size=self.batch_size,
                                              shuffle=self.shuffle,
                                              num_workers=self.num_workers,
-                                             pin_memory=self.pin_memory, task=task_for_batch, use_batch_collate=True):
+                                             pin_memory=self.pin_memory, task=task_for_batch, use_batch_collate=self.use_batch_collate):
             return batch
             break

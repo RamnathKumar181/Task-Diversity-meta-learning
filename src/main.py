@@ -1,3 +1,4 @@
+import tensorflow as tf
 import argparse
 from src.logger import Logger
 import gc
@@ -12,6 +13,9 @@ from src.matching_networks import MatchingNetworksTrainer, MatchingNetworksTeste
 from src.cnaps import CNAPTrainer, CNAPTester
 from src.metaoptnet import MetaOptNetTrainer, MetaOptNetTester
 import wandb
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Quiet the TensorFlow warnings
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)  # Quiet the TensorFlow warnings
 
 
 def parse_args():
@@ -53,6 +57,8 @@ def parse_args():
                         help='Number of test example per class.'
                         ' If negative, same as the number '
                         'of training examples `--num-shots-test` (default: 15).')
+    parser.add_argument('--num-adaptation-steps', type=int, default=1,
+                        help='Number of adaptation steps (default: 1).')
 
     # Model
     parser.add_argument('--hidden-size', type=int, default=64,

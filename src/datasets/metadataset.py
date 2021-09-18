@@ -5,7 +5,7 @@ import random
 
 from torch.utils.data.dataloader import default_collate
 from torchmeta.utils.data import (CombinationMetaDataset, ClassDataset,
-    CombinationRandomSampler, MetaDataLoader)
+                                  CombinationRandomSampler, MetaDataLoader)
 from collections import OrderedDict
 from itertools import accumulate, chain, combinations
 from bisect import bisect_right
@@ -14,7 +14,6 @@ from src.datasets.meta_dataset.reader import Reader
 from src.datasets.meta_dataset.dataset_spec import load_dataset_spec
 from src.datasets.meta_dataset.learning_spec import Split
 from src.datasets.meta_dataset.decoder import ImageDecoder
-
 
 SOURCES = {
     'train': [
@@ -47,6 +46,7 @@ SOURCES = {
         'quickdraw',
         'fungi',
         'vgg_flower',
+        'traffic_sign',
         'mscoco'
     ]
 }
@@ -67,7 +67,6 @@ class MetaDataset(CombinationMetaDataset):
         self.num_ways = num_ways
         self.num_shots = num_shots
         self.num_shots_test = num_shots_test
-
         dataset = MetaDatasetClassDataset(
             root,
             meta_train=meta_train,
@@ -87,7 +86,6 @@ class MetaDataset(CombinationMetaDataset):
         support_images, query_images = [], []
         targets = torch.randperm(self.num_ways).unsqueeze(1)
         tasks = torch.tensor(index).unsqueeze(1)
-
         for class_id in index:
             images = []
             while len(images) < self.num_shots + self.num_shots_test:
@@ -104,7 +102,6 @@ class MetaDataset(CombinationMetaDataset):
         query_images = torch.stack(query_images, dim=0)
         query_labels = targets.repeat((1, self.num_shots_test)).view(-1)
         query_tasks = tasks.repeat((1, self.num_shots_test)).view(-1)
-
         return OrderedDict([
             ('train', (support_images, support_labels, support_tasks)),
             ('test', (query_images, query_labels, query_tasks))
@@ -140,6 +137,7 @@ class MetaDatasetClassDataset(ClassDataset):
         self.sources = SOURCES[self.meta_split]
 
         image_decoder = ImageDecoder(image_size=84, data_augmentation=None)
+
         def image_decode(example_string, source_id):
             image = image_decoder(example_string)
             return tf.transpose(image, (2, 0, 1))
@@ -162,7 +160,7 @@ class MetaDatasetClassDataset(ClassDataset):
             class_datasets = [dataset.map(image_decode) for dataset in class_datasets]
 
             self._class_datasets.append([dataset.as_numpy_iterator()
-                for dataset in class_datasets])
+                                         for dataset in class_datasets])
 
         self._cum_num_classes = list(accumulate(map(len, self._class_datasets)))
         self._cum_num_classes.insert(0, 0)
@@ -185,7 +183,7 @@ class MetaDatasetRandomSampler(CombinationRandomSampler):
         num_classes_per_source = list(map(len, self.data_source.dataset._class_datasets))
         num_classes_per_task = self.data_source.num_classes_per_task
         iterator = chain(*[combinations(range(num_classes), num_classes_per_task)
-            for num_classes in num_classes_per_source])
+                           for num_classes in num_classes_per_source])
 
         for _ in iterator:
             source = random.randrange(len(self.data_source.dataset.sources))
@@ -197,24 +195,24 @@ class MetaDatasetRandomSampler(CombinationRandomSampler):
 
 class MetaDatasetDataLoader(MetaDataLoader):
     def __init__(self,
-        dataset,
-        batch_size=1,
-        shuffle=True,
-        num_workers=0,
-        pin_memory=False,
-        drop_last=False,
-        timeout=0,
-        worker_init_fn=None
-    ):
+                 dataset,
+                 batch_size=1,
+                 shuffle=True,
+                 num_workers=0,
+                 pin_memory=False,
+                 drop_last=False,
+                 timeout=0,
+                 worker_init_fn=None
+                 ):
         super().__init__(dataset,
-            batch_size=batch_size,
-            shuffle=False,
-            sampler=MetaDatasetRandomSampler(dataset),
-            batch_sampler=None,
-            num_workers=num_workers,
-            collate_fn=default_collate,
-            pin_memory=pin_memory,
-            drop_last=drop_last,
-            timeout=timeout,
-            worker_init_fn=worker_init_fn
-        )
+                         batch_size=batch_size,
+                         shuffle=False,
+                         sampler=MetaDatasetRandomSampler(dataset),
+                         batch_sampler=None,
+                         num_workers=num_workers,
+                         collate_fn=default_collate,
+                         pin_memory=pin_memory,
+                         drop_last=drop_last,
+                         timeout=timeout,
+                         worker_init_fn=worker_init_fn
+                         )

@@ -32,7 +32,7 @@ class CombinationRandomSampler(RandomSampler):
         x = np.arange(int(num_classes))
         index = 0
         while index < num_classes:
-            if index+5 > num_classes:
+            if index+num_classes_per_task > num_classes:
                 y = set(x[-num_classes_per_task:])
             else:
                 y = set(x[index:index+num_classes_per_task])

@@ -62,7 +62,7 @@ class MetaOptNet(nn.Module):
         self.train_shot = train_shot
         self.eps = 0.0
 
-    def forward(self, support_set_images, support_set_y, target_image, target_y):
+    def forward(self, support_set_images, support_set_y, target_image, target_y, dpp=False):
         """
         Main process of the network
         :param support_set_images: shape[batch_size,sequence_length,num_channels,image_size,image_size]
@@ -77,6 +77,8 @@ class MetaOptNet(nn.Module):
         emb_support = self.embedding_network(support_set_images.reshape(
             [-1] + list(support_set_images.shape[-3:])))
         emb_support = emb_support.reshape(self.episodes_per_batch, self.train_n_support, -1)
+        if dpp:
+            return emb_support
 
         emb_query = self.embedding_network(
             target_image.reshape([-1] + list(target_image.shape[-3:])))

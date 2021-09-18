@@ -2,8 +2,9 @@ import torch
 import numpy as np
 from tqdm import tqdm
 from collections import OrderedDict
-from src.utils import tensors_to_device
 from src.cnaps.metalearners.loss import CNAPsLoss, aggregate_accuracy
+import gc
+import logging
 
 
 class CNAPs(object):
@@ -101,10 +102,10 @@ class CNAPs(object):
             results.update({
                 'accuracies': np.zeros((num_tasks,), dtype=np.float32)
             })
-
         mean_loss = torch.tensor(0., device=self.device)
         for task_id, (train_inputs, train_targets, task, test_inputs, test_targets, _) \
                 in enumerate(zip(*batch['train'], *batch['test'])):
+            logging.info(f"Task: {task_id}")
             train_inputs = train_inputs.to(device=self.device)
             train_targets = train_targets.to(device=self.device)
             test_inputs = test_inputs.to(device=self.device)
@@ -115,10 +116,10 @@ class CNAPs(object):
                 self.model.feature_adaptation_network.regularization_term()).cuda(0)
             regularizer_scaling = 0.001
             loss += regularizer_scaling * regularization_term
-            accuracy = aggregate_accuracy(target_logits, test_targets)
+            accuracy = aggregate_accuracy(target_logits, test_targets).detach().item()
             loss.backward(retain_graph=False)
-            results['loss'][task_id] = loss.item()
-            mean_loss += loss
+            results['loss'][task_id] = loss.detach().item()
+            mean_loss += loss.detach().item()
 
             if is_classification_task:
                 results['accuracies'][task_id] = accuracy
@@ -127,10 +128,10 @@ class CNAPs(object):
             if self.log_test_tasks and not train:
                 self.test_task_performance[str(task.cpu().tolist())
                                            ] = results['accuracies'][task_id]
+            del train_inputs, train_targets, test_inputs, test_targets
 
         mean_loss.div_(num_tasks)
         results['mean_loss'] = mean_loss.item()
-
         return mean_loss, results
 
     def train(self, dataloader, max_batches=250, verbose=True, **kwargs):
@@ -154,6 +155,7 @@ class CNAPs(object):
         self.model.train()
         while num_batches < max_batches:
             for batch in dataloader:
+                logging.info(f"Train Batch: {num_batches}")
                 if num_batches >= max_batches:
                     break
 
@@ -162,9 +164,10 @@ class CNAPs(object):
 
                 self.optimizer.zero_grad()
 
-                batch = tensors_to_device(batch, device=self.device)
                 loss, results = self.get_loss(batch, train=True)
                 self.optimizer.step()
+                torch.cuda.empty_cache()
+                gc.collect()
                 yield results
                 num_batches += 1
 
@@ -196,9 +199,9 @@ class CNAPs(object):
             for batch in dataloader:
                 if num_batches >= max_batches:
                     break
-
-                batch = tensors_to_device(batch, device=self.device)
+                logging.info(f"Test Batch: {num_batches}")
                 _, results = self.get_loss(batch)
                 yield results
-
+                torch.cuda.empty_cache()
+                gc.collect()
                 num_batches += 1

@@ -1,9 +1,7 @@
 import os
-import torch
 import tensorflow.compat.v1 as tf
 
 from torchmeta.utils.data import CombinationMetaDataset, ClassDataset
-from collections import OrderedDict
 
 from src.datasets.meta_dataset.reader import Reader
 from src.datasets.meta_dataset.dataset_spec import load_dataset_spec
@@ -77,10 +75,11 @@ class SingleMetaDatasetClassDataset(ClassDataset):
             raise ValueError('Unknown split')
         if source not in SOURCES[self.meta_split]:
             raise ValueError(f'The source `{source}` is not in the list of '
-                f'sources for the `{self.meta_split}` split: '
-                f'{SOURCES[self.meta_split]}')
+                             f'sources for the `{self.meta_split}` split: '
+                             f'{SOURCES[self.meta_split]}')
 
         image_decoder = ImageDecoder(image_size=84, data_augmentation=None)
+
         def image_decode(example_string, source_id):
             image = image_decoder(example_string)
             return tf.transpose(image, (2, 0, 1))
@@ -98,7 +97,7 @@ class SingleMetaDatasetClassDataset(ClassDataset):
         class_datasets = reader.construct_class_datasets()
         class_datasets = [dataset.map(image_decode) for dataset in class_datasets]
         self._class_datasets = [dataset.as_numpy_iterator()
-                for dataset in class_datasets]
+                                for dataset in class_datasets]
 
     def __getitem__(self, index):
         return self._class_datasets[index]

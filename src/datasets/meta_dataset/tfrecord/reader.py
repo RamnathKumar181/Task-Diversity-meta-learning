@@ -118,7 +118,7 @@ def process_feature(feature: example_pb2.Feature,
         if tf_typename != inferred_typename:
             reversed_mapping = {v: k for k, v in typename_mapping.items()}
             raise TypeError(f"Incompatible type '{typename}' for `{key}` "
-                        f"(should be '{reversed_mapping[inferred_typename]}').")
+                            f"(should be '{reversed_mapping[inferred_typename]}').")
 
     if inferred_typename == "bytes_list":
         value = np.frombuffer(value[0], dtype=np.uint8)
@@ -226,8 +226,10 @@ def example_loader(data_path: str,
 
 def sequence_loader(data_path: str,
                     index_path: typing.Union[str, None],
-                    context_description: typing.Union[typing.List[str], typing.Dict[str, str], None] = None,
-                    features_description: typing.Union[typing.List[str], typing.Dict[str, str], None] = None,
+                    context_description: typing.Union[typing.List[str],
+                                                      typing.Dict[str, str], None] = None,
+                    features_description: typing.Union[typing.List[str],
+                                                       typing.Dict[str, str], None] = None,
                     shard: typing.Optional[typing.Tuple[int, int]] = None,
                     ) -> typing.Iterable[typing.Tuple[typing.Dict[str, np.ndarray],
                                                       typing.Dict[str, typing.List[np.ndarray]]]]:
@@ -287,7 +289,8 @@ def sequence_loader(data_path: str,
         example.ParseFromString(record)
 
         context = extract_feature_dict(example.context, context_description, typename_mapping)
-        features = extract_feature_dict(example.feature_lists, features_description, typename_mapping)
+        features = extract_feature_dict(
+            example.feature_lists, features_description, typename_mapping)
 
         yield context, features
 
@@ -298,7 +301,8 @@ def tfrecord_loader(data_path: str,
                     description: typing.Union[typing.List[str], typing.Dict[str, str], None] = None,
                     shard: typing.Optional[typing.Tuple[int, int]] = None,
                     shuffle: bool = False,
-                    sequence_description: typing.Union[typing.List[str], typing.Dict[str, str], None] = None,
+                    sequence_description: typing.Union[typing.List[str],
+                                                       typing.Dict[str, str], None] = None,
                     ) -> typing.Iterable[typing.Union[typing.Dict[str, np.ndarray],
                                                       typing.Tuple[typing.Dict[str, np.ndarray],
                                                                    typing.Dict[str, typing.List[np.ndarray]]]]]:
@@ -353,8 +357,10 @@ def tfrecord_loader(data_path: str,
 def multi_tfrecord_loader(data_pattern: str,
                           index_pattern: typing.Union[str, None],
                           splits: typing.Dict[str, float],
-                          description: typing.Union[typing.List[str], typing.Dict[str, str], None] = None,
-                          sequence_description: typing.Union[typing.List[str], typing.Dict[str, str], None] = None,
+                          description: typing.Union[typing.List[str],
+                                                    typing.Dict[str, str], None] = None,
+                          sequence_description: typing.Union[typing.List[str],
+                                                             typing.Dict[str, str], None] = None,
                           ) -> typing.Iterable[typing.Union[typing.Dict[str, np.ndarray],
                                                             typing.Tuple[typing.Dict[str, np.ndarray],
                                                                          typing.Dict[str, typing.List[np.ndarray]]]]]:
@@ -396,8 +402,8 @@ def multi_tfrecord_loader(data_pattern: str,
         A repeating iterator that generates batches of data.
     """
     loaders = [functools.partial(tfrecord_loader, data_path=data_pattern.format(split),
-                                 index_path=index_pattern.format(split) \
-                                     if index_pattern is not None else None,
+                                 index_path=index_pattern.format(split)
+                                 if index_pattern is not None else None,
                                  description=description,
                                  sequence_description=sequence_description,
                                  )
