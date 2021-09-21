@@ -66,7 +66,8 @@ class ProtonetTrainer():
                                                  batch_size=self.args.batch_size,
                                                  shuffle=False if self.args.dataset == "meta_dataset" else True,
                                                  num_workers=self.args.num_workers,
-                                                 pin_memory=True)
+                                                 pin_memory=True,
+                                                 use_batch_collate=self.args.dataset != 'meta_dataset')
         elif self.args.task_sampler == 'no_diversity_batch':
             logging.info("Using no_diversity_batch sampler:\n\n")
             from src.datasets.task_sampler import BatchMetaDataLoaderNDB as BMD_NDB
@@ -74,7 +75,8 @@ class ProtonetTrainer():
                                                  batch_size=self.args.batch_size,
                                                  shuffle=False if self.args.dataset == "meta_dataset" else True,
                                                  num_workers=self.args.num_workers,
-                                                 pin_memory=True)
+                                                 pin_memory=True,
+                                                 use_batch_collate=self.args.dataset != 'meta_dataset')
         elif self.args.task_sampler == 'no_diversity_tasks_per_batch':
             logging.info("Using no_diversity_tasks_per_batch sampler:\n\n")
             from src.datasets.task_sampler import BatchMetaDataLoaderNDTB as BMD_NDTB
@@ -82,7 +84,8 @@ class ProtonetTrainer():
                                                   batch_size=self.args.batch_size,
                                                   shuffle=False if self.args.dataset == "meta_dataset" else True,
                                                   num_workers=self.args.num_workers,
-                                                  pin_memory=True)
+                                                  pin_memory=True,
+                                                  use_batch_collate=self.args.dataset != 'meta_dataset')
         elif self.args.task_sampler == 'ohtm':
             logging.info("Using online hardest task mining sampler:\n\n")
             from src.datasets.task_sampler import OHTM
@@ -90,7 +93,8 @@ class ProtonetTrainer():
                                               batch_size=self.args.batch_size,
                                               shuffle=False if self.args.dataset == "meta_dataset" else True,
                                               num_workers=self.args.num_workers,
-                                              pin_memory=True)
+                                              pin_memory=True,
+                                              use_batch_collate=self.args.dataset != 'meta_dataset')
         elif self.args.task_sampler == 's-DPP':
             logging.info("Using Static DPP task sampler:\n\n")
             from src.datasets.task_sampler import sDPP
@@ -99,7 +103,8 @@ class ProtonetTrainer():
                                               shuffle=False if self.args.dataset == "meta_dataset" else True,
                                               num_workers=self.args.num_workers,
                                               pin_memory=True,
-                                              dataset_name=self.args.dataset)
+                                              dataset_name=self.args.dataset,
+                                              use_batch_collate=self.args.dataset != 'meta_dataset')
         elif self.args.task_sampler == 'd-DPP':
             logging.info("Using Dynamic DPP task sampler:\n\n")
             from src.datasets.task_sampler import dDPP
@@ -108,19 +113,22 @@ class ProtonetTrainer():
                                               shuffle=False if self.args.dataset == "meta_dataset" else True,
                                               num_workers=self.args.num_workers,
                                               pin_memory=True,
-                                              num_ways=self.args.num_ways)
+                                              num_ways=self.args.num_ways,
+                                              use_batch_collate=self.args.dataset != 'meta_dataset')
         else:
             logging.info("Using uniform_task sampler:\n\n")
             self.meta_train_dataloader = BMD(self.benchmark.meta_train_dataset,
                                              batch_size=self.args.batch_size,
                                              shuffle=False if self.args.dataset == "meta_dataset" else True,
                                              num_workers=self.args.num_workers,
-                                             pin_memory=True)
+                                             pin_memory=True,
+                                             use_batch_collate=self.args.dataset != 'meta_dataset')
         self.meta_val_dataloader = BMD(self.benchmark.meta_val_dataset,
                                        batch_size=self.args.batch_size,
                                        shuffle=False if self.args.dataset == "meta_dataset" else True,
                                        num_workers=self.args.num_workers,
-                                       pin_memory=True)
+                                       pin_memory=True,
+                                       use_batch_collate=self.args.dataset != 'meta_dataset')
 
         self.meta_optimizer = torch.optim.Adam(self.benchmark.model.parameters(),
                                                lr=self.args.meta_lr)
@@ -207,8 +215,8 @@ class ProtonetTester():
                                                self.config['num_shots_test'],
                                                image_size=self.config['image_size'],
                                                hidden_size=self.config['hidden_size'],
-                                               test_dataset=self.config['dataset_test'],
-                                               use_augmentations=self.config['use_augmentations'])
+                                               use_augmentations=self.config['use_augmentations'],
+                                               sub_dataset_name=self.config['sub_dataset'])
 
         if self.config['log_test_tasks']:
             seed_everything()
@@ -216,14 +224,16 @@ class ProtonetTester():
                                             batch_size=self.config['batch_size'],
                                             shuffle=True,
                                             num_workers=0,
-                                            pin_memory=True)
+                                            pin_memory=True,
+                                            use_batch_collate=self.config['dataset'] != 'single_meta_dataset')
 
         else:
             self.meta_test_dataloader = BMD(self.benchmark.meta_test_dataset,
                                             batch_size=self.config['batch_size'],
                                             shuffle=True,
                                             num_workers=self.config['num_workers'],
-                                            pin_memory=True)
+                                            pin_memory=True,
+                                            use_batch_collate=self.config['dataset'] != 'single_meta_dataset')
 
         with open(self.config['model_path'], 'rb') as f:
             self.benchmark.model.load_state_dict(torch.load(f, map_location=self.device))

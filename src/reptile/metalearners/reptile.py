@@ -90,7 +90,7 @@ class Reptile(object):
 
     def __init__(self, model, optimizer=None, step_size=0.1, outer_step_size=0.001, first_order=False,
                  learn_step_size=False, per_param_step_size=False,
-                 num_adaptation_steps=1, scheduler=None,
+                 num_adaptation_steps=5, scheduler=None,
                  loss_function=F.cross_entropy, device=None, lr=0.001, meta_optimizer=None,
                  ohtm=False, batch_size=4, log_test_tasks=False):
         self.model = model.to(device=device)
@@ -158,7 +158,7 @@ class Reptile(object):
             test_target = test_target.to(device=self.device)
             with higher.innerloop_ctx(self.model, self.optimizer, track_higher_grads=True) as (fmodel, diffopt):
 
-                for step in range(5):
+                for step in range(self.num_adaptation_steps):
                     if train:
                         index = np.random.permutation(np.arange(len(test_input)))[:10]
                         train_input = test_input[index]

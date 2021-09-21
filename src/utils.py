@@ -84,7 +84,6 @@ def get_benchmark_by_name(model_name,
                           num_shots_test,
                           image_size=84,
                           hidden_size=None,
-                          test_dataset=None,
                           metaoptnet_embedding='ResNet',
                           metaoptnet_head='SVM-CS',
                           use_augmentations=False,
@@ -102,8 +101,6 @@ def get_benchmark_by_name(model_name,
     dataset_transform = ClassSplitter(shuffle=True,
                                       num_train_per_class=num_shots,
                                       num_test_per_class=num_shots_test)
-    if test_dataset is not None:
-        folder = test_dataset
 
     if name == 'omniglot':
         class_augmentations = [Rotation([90, 180, 270])]
@@ -298,13 +295,13 @@ def get_benchmark_by_name(model_name,
             loss_function = torch.nn.NLLLoss
     elif name == 'single_meta_dataset':
         train_set, validation_set, test_set = init_metadataset_data(name, sub_dataset_name)
-        meta_train_dataset = SingleMetaDataset(folder, source='ilsvrc_2012',
+        meta_train_dataset = SingleMetaDataset(folder, source=sub_dataset_name,
                                                num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,
                                                meta_train=True)
-        meta_val_dataset = SingleMetaDataset(folder, source='ilsvrc_2012',
+        meta_val_dataset = SingleMetaDataset(folder, source=sub_dataset_name,
                                              num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,
                                              meta_val=True)
-        meta_test_dataset = SingleMetaDataset(folder, source='ilsvrc_2012',
+        meta_test_dataset = SingleMetaDataset(folder, source=sub_dataset_name,
                                               num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,
                                               meta_test=True)
 

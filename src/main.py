@@ -57,8 +57,6 @@ def parse_args():
                         help='Number of test example per class.'
                         ' If negative, same as the number '
                         'of training examples `--num-shots-test` (default: 15).')
-    parser.add_argument('--num-adaptation-steps', type=int, default=1,
-                        help='Number of adaptation steps (default: 1).')
 
     # Model
     parser.add_argument('--hidden-size', type=int, default=64,
@@ -91,7 +89,7 @@ def parse_args():
     parser.add_argument('--meta-lr', type=float, default=0.2,
                         help='Learning rate for the meta-optimizer '
                         '(optimization of the outer loss). The default '
-                        'optimizer is Adam (default: 1e-3).')
+                        'optimizer is Adam (default: 0.2).')
     parser.add_argument('--lr', type=float, default=0.001,
                         help='Learning rate for the optimizer '
                         '(optimization of the outer loss). The default '
@@ -162,11 +160,13 @@ def test_model(args, dataset_name=None):
                 config[arg] = getattr(args, arg)
         config['verbose'] = args.verbose
         config['train'] = args.train
-        config['dataset_test'] = args.dataset
+        config['dataset'] = args.dataset
         config['log_test_tasks'] = args.log_test_tasks
-        wandb.init(project='Task_Diversity', config=config, name=config['exp_name'],
-                   settings=wandb.Settings(start_method='thread'), reinit=False)
-        wandb.config = config
+        config['sub_dataset'] = args.sub_dataset
+        if dataset_name is not None or dataset_name == 'ilsvrc_2012':
+            wandb.init(project='Task_Diversity', config=config, name=config['exp_name'],
+                       settings=wandb.Settings(start_method='thread'), reinit=False)
+            wandb.config = config
         if config['model'] == 'maml':
             """
             MAML Test
@@ -208,7 +208,6 @@ def test_model(args, dataset_name=None):
     else:
         print(f"Average Performance of {config['model']} on {args.dataset}:")
     log.print_statistics()
-    wandb.finish()
 
 
 if __name__ == '__main__':
@@ -281,10 +280,12 @@ if __name__ == '__main__':
 
         print(f"Average Performance of {args.model} on {args.dataset}:")
         log.print_statistics()
-    if args.dataset == 'meta-dataset':
-        for dataset in ['ilsvrc_2012', 'omniglot', 'aircraft', 'cu_birds', 'fungi', 'mscoco', 'quickdraw', 'traffic_sign', 'vgg_flower', 'dtd']:
+    if args.dataset == 'meta_dataset':
+        for dataset in ["ilsvrc_2012", "omniglot", "aircraft", "cu_birds", "dtd", "quickdraw", "fungi",
+                        "vgg_flower", "traffic_sign", "mscoco"]:
             args.dataset = 'single_meta_dataset'
             args.sub_dataset = dataset
             test_model(args, dataset)
     else:
         test_model(args)
+    wandb.finish()

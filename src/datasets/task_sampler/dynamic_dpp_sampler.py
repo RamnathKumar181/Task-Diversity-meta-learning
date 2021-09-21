@@ -81,9 +81,12 @@ class DPPSampler(RandomSampler):
                 try:
                     self.DPP.sample_exact_k_dpp(size=num_classes_per_task, random_state=self.rng)
                     yield tuple(self.DPP.list_of_samples[-1])
-                except Exception as err:
-                    print(err)
-                    yield tuple(random.sample(range(num_classes), num_classes_per_task))
+                except Exception:
+                    tasks = []
+                    for i in range(int(num_classes_per_task/5)):
+                        self.DPP.sample_exact_k_dpp(size=5, random_state=self.rng)
+                        tasks += self.DPP.list_of_samples[-1]
+                    yield tuple(tasks)
 
 
 class MetaDataLoader(DataLoader):

@@ -135,6 +135,7 @@ class CNAPs(object):
         return mean_loss, results
 
     def train(self, dataloader, max_batches=250, verbose=True, **kwargs):
+        max_batches = 2  # Remove later!
         with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
             for results in self.train_iter(dataloader, max_batches=max_batches):
                 pbar.update(1)
@@ -172,6 +173,7 @@ class CNAPs(object):
                 num_batches += 1
 
     def evaluate(self, dataloader, max_batches=200, verbose=True, **kwargs):
+        max_batches = 2  # Remove later!
         mean_loss, mean_accuracy, count = 0., 0., 0
         with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
             for results in self.evaluate_iter(dataloader, max_batches=max_batches):

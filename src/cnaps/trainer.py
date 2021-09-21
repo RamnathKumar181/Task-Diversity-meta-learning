@@ -55,8 +55,7 @@ class CNAPTrainer():
                                                self.args.num_shots_test,
                                                self.args.image_size,
                                                hidden_size=self.args.hidden_size,
-                                               use_augmentations=self.args.use_augmentations,
-                                               sub_dataset_name=self.args.sub_dataset)
+                                               use_augmentations=self.args.use_augmentations)
         if self.args.task_sampler == 'no_diversity_task':
             logging.info("Using no_diversity_task sampler:\n\n")
             from src.datasets.task_sampler import BatchMetaDataLoaderNDT as BMD_NDT
@@ -218,7 +217,7 @@ class CNAPTester():
                                                image_size=self.config['image_size'],
                                                hidden_size=self.config['hidden_size'],
                                                use_augmentations=self.config['use_augmentations'],
-                                               test_dataset=self.config['dataset_test'])
+                                               sub_dataset_name=self.config['sub_dataset'])
 
         if self.config['log_test_tasks']:
             seed_everything()
@@ -226,14 +225,16 @@ class CNAPTester():
                                             batch_size=self.config['batch_size'],
                                             shuffle=True,
                                             num_workers=0,
-                                            pin_memory=True)
+                                            pin_memory=True,
+                                            use_batch_collate=self.config['dataset'] != 'single_meta_dataset')
 
         else:
             self.meta_test_dataloader = BMD(self.benchmark.meta_test_dataset,
                                             batch_size=self.config['batch_size'],
                                             shuffle=True,
                                             num_workers=self.config['num_workers'],
-                                            pin_memory=True)
+                                            pin_memory=True,
+                                            use_batch_collate=self.config['dataset'] != 'single_meta_dataset')
 
         with open(self.config['model_path'], 'rb') as f:
             self.benchmark.model.load_state_dict(torch.load(f, map_location=self.device))
