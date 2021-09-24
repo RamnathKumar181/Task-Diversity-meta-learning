@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=test_reptile_omniglot
-#SBATCH --output=../logs/test_reptile_omniglot%a.out
-#SBATCH --error=../logs/test_reptile_omniglot%a.err
+#SBATCH --output=../logs/test_reptile_omniglot_%a.out
+#SBATCH --error=../logs/test_reptile_omniglot_%a.err
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=10G
