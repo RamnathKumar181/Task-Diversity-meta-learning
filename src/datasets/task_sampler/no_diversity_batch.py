@@ -87,7 +87,7 @@ class BatchMetaDataLoaderNDB(MetaDataLoader):
         if use_batch_collate:
             collate_fn = BatchMetaCollate(default_collate)
         else:
-            collate_fn = None
+            collate_fn = default_collate
 
         super(BatchMetaDataLoaderNDB, self).__init__(dataset,
                                                      batch_size=batch_size, shuffle=shuffle, sampler=sampler,

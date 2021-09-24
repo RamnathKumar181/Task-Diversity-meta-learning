@@ -56,7 +56,7 @@ def get_prototypes(embeddings, targets, num_classes):
 class CombinationRandomSamplerStaticDDP(RandomSampler):
     def __init__(self, data_source, dataset_name):
         self.model = self.init_static_model(data_source, dataset_name)
-        Phi = self.get_task_embedding(data_source)
+        Phi = self.get_task_embedding(data_source, dataset_name)
         self.rng = np.random.RandomState(1)
         self.DPP = FiniteDPP('likelihood', **{'L': Phi.dot(Phi.T)})
         if not isinstance(data_source, CombinationMetaDataset):
@@ -83,13 +83,14 @@ class CombinationRandomSamplerStaticDDP(RandomSampler):
                     'cuda' if torch.cuda.is_available() else 'cpu')))
         return model
 
-    def get_task_embedding(self, data_source):
+    def get_task_embedding(self, data_source, dataset_name):
         task_embedding = {}
         for batch in DisjointMetaDataloader(data_source,
                                             batch_size=32,
                                             shuffle=False,
                                             num_workers=0,
-                                            pin_memory=True):
+                                            pin_memory=True,
+                                            use_batch_collate=dataset_name != 'meta_dataset'):
             train_inputs, train_targets, tasks = batch['train']
             with torch.no_grad():
                 train_embeddings, _ = self.model(train_inputs)
@@ -158,7 +159,7 @@ class sDPP(MetaDataLoader):
         if use_batch_collate:
             collate_fn = BatchMetaCollate(default_collate)
         else:
-            collate_fn = None
+            collate_fn = default_collate
 
         super(sDPP, self).__init__(dataset,
                                    batch_size=batch_size, shuffle=shuffle, sampler=sampler,

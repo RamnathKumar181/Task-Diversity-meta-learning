@@ -91,7 +91,7 @@ class BatchMetaDataLoaderOHTM(MetaDataLoader):
         if use_batch_collate:
             collate_fn = BatchMetaCollate(default_collate)
         else:
-            collate_fn = None
+            collate_fn = default_collate
 
         super(BatchMetaDataLoaderOHTM, self).__init__(dataset,
                                                       batch_size=batch_size, shuffle=shuffle, sampler=sampler, num_workers=num_workers,

@@ -163,7 +163,7 @@ def test_model(args, dataset_name=None):
         config['dataset'] = args.dataset
         config['log_test_tasks'] = args.log_test_tasks
         config['sub_dataset'] = args.sub_dataset
-        if dataset_name is not None or dataset_name == 'ilsvrc_2012':
+        if not args.train and (dataset_name is None or dataset_name == 'ilsvrc_2012'):
             wandb.init(project='Task_Diversity', config=config, name=config['exp_name'],
                        settings=wandb.Settings(start_method='thread'), reinit=False)
             wandb.config = config

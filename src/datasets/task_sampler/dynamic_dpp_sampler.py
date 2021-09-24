@@ -137,7 +137,7 @@ class BatchMetaDataLoaderdDPP(MetaDataLoader):
         if use_batch_collate:
             collate_fn = BatchMetaCollate(default_collate)
         else:
-            collate_fn = None
+            collate_fn = default_collate
 
         super(BatchMetaDataLoaderdDPP, self).__init__(dataset,
                                                       batch_size=batch_size, shuffle=shuffle, sampler=sampler, num_workers=num_workers,
@@ -164,7 +164,7 @@ class dDPP(object):
                                                           shuffle=False,
                                                           num_workers=8,
                                                           pin_memory=True,
-                                                          use_batch_collate=True)
+                                                          use_batch_collate=use_batch_collate)
         self.model = None
         self.DPP = None
 
