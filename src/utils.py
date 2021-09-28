@@ -4,7 +4,7 @@ import random
 import numpy as np
 import os
 from collections import namedtuple, OrderedDict
-from src.datasets import Omniglot, MiniImagenet, MetaDataset, SingleMetaDataset
+from src.datasets import Omniglot, MiniImagenet, MetaDataset, SingleMetaDataset, TieredImagenet
 from torchmeta.transforms import ClassSplitter, Categorical, Rotation
 from torchvision.transforms import ToTensor, Resize, Compose
 from torchvision import transforms
@@ -264,6 +264,66 @@ def get_benchmark_by_name(model_name,
             model = MetaOptNet(name, metaoptnet_embedding, metaoptnet_head,
                                num_ways, num_shots, num_shots_test)
             loss_function = torch.nn.NLLLoss
+    elif name == 'tiered_imagenet':
+        transform = []
+        if use_augmentations:
+            transform.append(transforms.RandomCrop(image_size, padding=8))
+            transform.append(transforms.ColorJitter(
+                brightness=0.4, contrast=0.4, saturation=0.4))
+            transform.append(transforms.RandomHorizontalFlip())
+        transform.append(Resize(image_size))
+        transform.append(ToTensor())
+        transform = Compose(transform)
+        try:
+            meta_train_dataset = TieredImagenet(folder,
+                                                transform=transform,
+                                                target_transform=Categorical(num_ways),
+                                                num_classes_per_task=num_ways,
+                                                meta_train=True,
+                                                dataset_transform=dataset_transform,
+                                                download=False)
+        except Exception:
+            meta_train_dataset = TieredImagenet(folder,
+                                                transform=transform,
+                                                target_transform=Categorical(num_ways),
+                                                num_classes_per_task=num_ways,
+                                                meta_train=True,
+                                                dataset_transform=dataset_transform,
+                                                download=True)
+        meta_val_dataset = TieredImagenet(folder,
+                                          transform=transform,
+                                          target_transform=Categorical(num_ways),
+                                          num_classes_per_task=num_ways,
+                                          meta_val=True,
+                                          dataset_transform=dataset_transform)
+        meta_test_dataset = TieredImagenet(folder,
+                                           transform=transform,
+                                           target_transform=Categorical(num_ways),
+                                           num_classes_per_task=num_ways,
+                                           meta_test=True,
+                                           dataset_transform=dataset_transform)
+
+        if model_name == 'maml':
+            model = ModelConvMiniImagenet(num_ways, hidden_size=hidden_size)
+            loss_function = F.cross_entropy
+        elif model_name == 'reptile':
+            model = ModelConvMiniImagenetReptile(num_ways, hidden_size=hidden_size)
+            loss_function = F.cross_entropy
+        elif model_name == 'protonet':
+            model = Protonet_MiniImagenet()
+            loss_function = prototypical_loss
+        elif model_name == 'matching_networks':
+            model = MatchingNetwork(keep_prob=0, batch_size=32, num_channels=3, fce=False, num_classes_per_set=num_ways,
+                                    num_samples_per_class=num_shots, image_size=84)
+            loss_function = torch.nn.NLLLoss
+        elif model_name == 'cnaps':
+            model = Cnaps()
+            loss_function = CNAPsLoss
+        elif model_name == 'metaoptnet':
+            model = MetaOptNet(name, metaoptnet_embedding, metaoptnet_head,
+                               num_ways, num_shots, num_shots_test)
+            loss_function = torch.nn.NLLLoss
+
     elif name == 'meta_dataset':
         train_set, validation_set, test_set = init_metadataset_data()
         meta_train_dataset = MetaDataset(folder, num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,

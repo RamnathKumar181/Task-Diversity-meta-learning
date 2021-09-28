@@ -4,7 +4,6 @@ from tqdm import tqdm
 from collections import OrderedDict
 from src.cnaps.metalearners.loss import CNAPsLoss, aggregate_accuracy
 import gc
-import logging
 
 
 class CNAPs(object):
@@ -105,7 +104,6 @@ class CNAPs(object):
         mean_loss = torch.tensor(0., device=self.device)
         for task_id, (train_inputs, train_targets, task, test_inputs, test_targets, _) \
                 in enumerate(zip(*batch['train'], *batch['test'])):
-            logging.info(f"Task: {task_id}")
             train_inputs = train_inputs.to(device=self.device)
             train_targets = train_targets.to(device=self.device)
             test_inputs = test_inputs.to(device=self.device)
@@ -155,7 +153,6 @@ class CNAPs(object):
         self.model.train()
         while num_batches < max_batches:
             for batch in dataloader:
-                logging.info(f"Train Batch: {num_batches}")
                 if num_batches >= max_batches:
                     break
 
@@ -199,7 +196,6 @@ class CNAPs(object):
             for batch in dataloader:
                 if num_batches >= max_batches:
                     break
-                logging.info(f"Test Batch: {num_batches}")
                 _, results = self.get_loss(batch)
                 yield results
                 torch.cuda.empty_cache()
