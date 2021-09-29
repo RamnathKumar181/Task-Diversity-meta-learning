@@ -281,6 +281,7 @@ if __name__ == '__main__':
 
         print(f"Average Performance of {args.model} on {args.dataset}:")
         log.print_statistics()
+    args.sub_dataset = None
     if args.dataset == 'meta_dataset':
         if not args.train:
             for dataset in ["ilsvrc_2012", "omniglot", "aircraft", "cu_birds", "dtd", "quickdraw", "fungi",

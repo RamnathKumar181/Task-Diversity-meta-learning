@@ -277,8 +277,12 @@ class ReptileTester():
             self.metalearner.test_task_performance['total'] = sum(list(
                 self.metalearner.test_task_performance.values()))/len(list(self.metalearner.test_task_performance.values()))
             print(f"First 10 tasks: {list(self.metalearner.test_task_performance.keys())[:10]}")
-            with open(os.path.join(dirname, 'task_performance.json'), 'w') as f:
-                json.dump(str(self.metalearner.test_task_performance.items()), f, indent=2)
+            if self.config['sub_dataset'] is not None:
+                with open(os.path.join(dirname, f'task_performance_{self.config["sub_dataset_name"]}.json'), 'w') as f:
+                    json.dump(str(self.metalearner.test_task_performance.items()), f, indent=2)
+            else:
+                with open(os.path.join(dirname, 'task_performance.json'), 'w') as f:
+                    json.dump(str(self.metalearner.test_task_performance.items()), f, indent=2)
         else:
             res, _ = self.run_epoch(0, max_batches=self.config['num_batches'])
         with open(os.path.join(dirname, 'results.json'), 'w') as f:
