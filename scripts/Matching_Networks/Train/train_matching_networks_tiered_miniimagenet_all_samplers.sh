@@ -1,12 +1,11 @@
 #!/bin/bash
-#SBATCH --partition=unkillable
-#SBATCH --job-name=matching_networks_tiered_miniimagenet
-#SBATCH --output=../logs/matching_networks_tiered_miniimagenet_%a.out
-#SBATCH --error=../logs/matching_networks_tiered_miniimagenet_%a.err
+#SBATCH --job-name=matching_networks_tiered_imagenet
+#SBATCH --output=../logs/matching_networks_tiered_imagenet_%a.out
+#SBATCH --error=../logs/matching_networks_tiered_imagenet_%a.err
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=20G
-#SBATCH --array=0-7
+#SBATCH --array=1-7
 
 source ../env/bin/activate
-cd .. && python -m src.main --exp_name matching_networks_tiered_miniimagenet --train --model matching_networks --runs 1 --folder $SLURM_TMPDIR/data --task_sampler $SLURM_ARRAY_TASK_ID --dataset tiered_miniimagenet --num-ways 5 --num-shots 1 --use-cuda --step-size 0.4 --batch-size 32 --num-workers 8 --num-epochs 100 --output-folder ./config/matching_networks_tiered_miniimagenet/$SLURM_ARRAY_TASK_ID/
+cd .. && python -m src.main --exp_name matching_networks_tiered_imagenet --train --model matching_networks --runs 1 --folder ./data --task_sampler $SLURM_ARRAY_TASK_ID --dataset tiered_imagenet --num-ways 5 --num-shots 1 --use-cuda --step-size 0.4 --batch-size 32 --meta-lr 0.001 --num-workers 8 --num-epochs 100 --output-folder ./config/matching_networks_tiered_imagenet/$SLURM_ARRAY_TASK_ID/

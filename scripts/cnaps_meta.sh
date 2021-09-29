@@ -1,5 +1,4 @@
 #!/bin/bash
-#SBATCH --partition=main
 #SBATCH --job-name=cnaps_meta
 #SBATCH --output=../logs/cnaps_meta.out
 #SBATCH --error=../logs/cnaps_meta.err
