@@ -4,7 +4,7 @@
 #SBATCH --error=../logs/cnaps_meta_dataset_%a.err
 #SBATCH --gres=gpu:2
 #SBATCH --cpus-per-task=2
-#SBATCH --mem=250G
+#SBATCH --mem=128G
 #SBATCH --array=0
 
 source ../env/bin/activate
