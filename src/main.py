@@ -282,11 +282,12 @@ if __name__ == '__main__':
         print(f"Average Performance of {args.model} on {args.dataset}:")
         log.print_statistics()
     if args.dataset == 'meta_dataset':
-        for dataset in ["ilsvrc_2012", "omniglot", "aircraft", "cu_birds", "dtd", "quickdraw", "fungi",
-                        "vgg_flower", "traffic_sign", "mscoco"]:
-            args.dataset = 'single_meta_dataset'
-            args.sub_dataset = dataset
-            test_model(args, dataset)
+        if not args.train:
+            for dataset in ["ilsvrc_2012", "omniglot", "aircraft", "cu_birds", "dtd", "quickdraw", "fungi",
+                            "vgg_flower", "traffic_sign", "mscoco"]:
+                args.dataset = 'single_meta_dataset'
+                args.sub_dataset = dataset
+                test_model(args, dataset)
     else:
         test_model(args)
     wandb.finish()

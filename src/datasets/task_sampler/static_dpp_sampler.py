@@ -76,7 +76,6 @@ class CombinationRandomSamplerStaticDDP(RandomSampler):
         from src.protonet.model import Protonet_Omniglot, Protonet_MiniImagenet
         model = Protonet_Omniglot() if dataset_name == 'omniglot' else Protonet_MiniImagenet()
         ways_path = "" if data_source.num_classes_per_task == 5 else "_20"
-        print(data_source.num_classes_per_task)
         for model_path in enumerate(glob(f"protonet_{dataset_name}{ways_path}/0/*/config.json")):
             with open(model_path, 'rb') as f:
                 model.load_state_dict(torch.load(f, map_location=torch.device(

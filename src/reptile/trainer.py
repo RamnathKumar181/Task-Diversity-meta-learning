@@ -136,7 +136,7 @@ class ReptileTrainer():
 
         self.metalearner = Reptile(self.benchmark.model,
                                    self.optimizer,
-                                   num_adaptation_steps=self.args.num_adaptation_steps,
+                                   num_adaptation_steps=self.args.num_steps,
                                    step_size=self.args.step_size,
                                    outer_step_size=self.args.lr,
                                    loss_function=self.benchmark.loss_function,

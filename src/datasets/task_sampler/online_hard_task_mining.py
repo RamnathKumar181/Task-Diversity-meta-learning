@@ -43,6 +43,31 @@ class OHTMSampler(RandomSampler):
                 yield tuple(random.sample(range(num_classes), num_classes_per_task))
 
 
+class MetaDatasetRandomSampler(OHTMSampler):
+    def __iter__(self):
+        num_classes_per_task = self.data_source.num_classes_per_task
+        if len(self.tasks):
+            x = self.tasks
+            for _ in range(len(self.tasks)):
+                y = random.sample(x, 1)
+                x = [item for item in x if item not in y]
+                yield tuple(y[0])
+            for _ in range(int(self.batch_size-len(self.tasks))):
+                source = random.randrange(len(self.data_source.dataset.sources))
+                num_classes = len(self.data_source.dataset._class_datasets[source])
+                offset = self.data_source.dataset._cum_num_classes[source]
+                indices = random.sample(range(num_classes), num_classes_per_task)
+                yield tuple(index + offset for index in indices)
+        else:
+
+            for _ in range(self.batch_size):
+                source = random.randrange(len(self.data_source.dataset.sources))
+                num_classes = len(self.data_source.dataset._class_datasets[source])
+                offset = self.data_source.dataset._cum_num_classes[source]
+                indices = random.sample(range(num_classes), num_classes_per_task)
+                yield tuple(index + offset for index in indices)
+
+
 class MetaDataLoader(DataLoader):
     def __init__(self, dataset, batch_size=1, shuffle=True, sampler=None,
                  batch_sampler=None, num_workers=0, collate_fn=None,

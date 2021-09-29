@@ -8,6 +8,7 @@ import random
 import warnings
 from itertools import combinations
 from torch.utils.data.sampler import RandomSampler
+from itertools import chain
 
 
 class CombinationRandomSampler(RandomSampler):
@@ -33,6 +34,26 @@ class CombinationRandomSampler(RandomSampler):
         for i in range(self.batch_size):
             x.append(random.sample(range(num_classes), num_classes_per_task))
         for _ in combinations(range(num_classes), num_classes_per_task):
+            random.shuffle(x)
+            for j in range(self.batch_size):
+                y = tuple(random.sample(x[j], num_classes_per_task))
+                yield y
+
+
+class MetaDatasetRandomSampler(CombinationRandomSampler):
+    def __iter__(self):
+        num_classes_per_source = list(map(len, self.data_source.dataset._class_datasets))
+        num_classes_per_task = self.data_source.num_classes_per_task
+        iterator = chain(*[combinations(range(num_classes), num_classes_per_task)
+                           for num_classes in num_classes_per_source])
+        x = []
+        for _ in range(self.batch_size):
+            source = random.randrange(len(self.data_source.dataset.sources))
+            num_classes = len(self.data_source.dataset._class_datasets[source])
+            offset = self.data_source.dataset._cum_num_classes[source]
+            indices = random.sample(range(num_classes), num_classes_per_task)
+            x.append(index + offset for index in indices)
+        for _ in iterator:
             random.shuffle(x)
             for j in range(self.batch_size):
                 y = tuple(random.sample(x[j], num_classes_per_task))
@@ -88,6 +109,7 @@ class BatchMetaDataLoaderNDB(MetaDataLoader):
             collate_fn = BatchMetaCollate(default_collate)
         else:
             collate_fn = default_collate
+            sampler = MetaDatasetRandomSampler(dataset)
 
         super(BatchMetaDataLoaderNDB, self).__init__(dataset,
                                                      batch_size=batch_size, shuffle=shuffle, sampler=sampler,

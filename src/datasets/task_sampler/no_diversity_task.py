@@ -8,6 +8,7 @@ import random
 import warnings
 from itertools import combinations
 from torch.utils.data.sampler import RandomSampler
+from itertools import chain
 
 
 class CombinationRandomSampler(RandomSampler):
@@ -32,6 +33,22 @@ class CombinationRandomSampler(RandomSampler):
         for _ in combinations(range(num_classes), num_classes_per_task):
             y = tuple(random.sample(x, num_classes_per_task))
             yield y
+
+
+class MetaDatasetRandomSampler(CombinationRandomSampler):
+    def __iter__(self):
+        num_classes_per_source = list(map(len, self.data_source.dataset._class_datasets))
+        num_classes_per_task = self.data_source.num_classes_per_task
+        iterator = chain(*[combinations(range(num_classes), num_classes_per_task)
+                           for num_classes in num_classes_per_source])
+
+        source = random.randrange(len(self.data_source.dataset.sources))
+        num_classes = len(self.data_source.dataset._class_datasets[source])
+        offset = self.data_source.dataset._cum_num_classes[source]
+        indices = random.sample(range(num_classes), num_classes_per_task)
+        for _ in iterator:
+            y = random.sample(indices, num_classes_per_task)
+            yield tuple(index + offset for index in y)
 
 
 class BatchMetaCollate(object):
@@ -83,6 +100,7 @@ class BatchMetaDataLoaderNDT(MetaDataLoader):
             collate_fn = BatchMetaCollate(default_collate)
         else:
             collate_fn = default_collate
+            sampler = MetaDatasetRandomSampler(dataset)
 
         super(BatchMetaDataLoaderNDT, self).__init__(dataset,
                                                      batch_size=batch_size, shuffle=shuffle, sampler=sampler,

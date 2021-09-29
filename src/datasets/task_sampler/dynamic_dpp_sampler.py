@@ -89,6 +89,29 @@ class DPPSampler(RandomSampler):
                     yield tuple(tasks)
 
 
+class MetaDatasetRandomSampler(DPPSampler):
+    def __iter__(self):
+        num_classes_per_task = self.data_source.num_classes_per_task
+        if self.DPP is None:
+            for _ in range(self.batch_size):
+                source = random.randrange(len(self.data_source.dataset.sources))
+                num_classes = len(self.data_source.dataset._class_datasets[source])
+                offset = self.data_source.dataset._cum_num_classes[source]
+                indices = random.sample(range(num_classes), num_classes_per_task)
+                yield tuple(index + offset for index in indices)
+        else:
+            for _ in range(self.batch_size):
+                try:
+                    self.DPP.sample_exact_k_dpp(size=num_classes_per_task, random_state=self.rng)
+                    yield tuple(self.DPP.list_of_samples[-1])
+                except Exception:
+                    tasks = []
+                    for i in range(int(num_classes_per_task/5)):
+                        self.DPP.sample_exact_k_dpp(size=5, random_state=self.rng)
+                        tasks += self.DPP.list_of_samples[-1]
+                    yield tuple(tasks)
+
+
 class MetaDataLoader(DataLoader):
     def __init__(self, dataset, batch_size=1, shuffle=True, sampler=None,
                  batch_sampler=None, num_workers=0, collate_fn=None,

@@ -40,6 +40,24 @@ class CombinationRandomSampler(RandomSampler):
             yield tuple(y)
 
 
+class MetaDatasetRandomSampler(CombinationRandomSampler):
+    def __iter__(self):
+        num_classes_per_task = self.data_source.num_classes_per_task
+
+        for source in len(self.data_source.dataset.sources):
+            index = 0
+            num_classes = len(self.data_source.dataset._class_datasets[source])
+            offset = self.data_source.dataset._cum_num_classes[source]
+            x = np.arange(int(num_classes))
+            while index < num_classes:
+                if index+num_classes_per_task > num_classes:
+                    y = set(x[-num_classes_per_task:])
+                else:
+                    y = set(x[index:index+num_classes_per_task])
+                index += num_classes_per_task
+                yield tuple(index + offset for index in y)
+
+
 class BatchMetaCollate(object):
 
     def __init__(self, collate_fn):

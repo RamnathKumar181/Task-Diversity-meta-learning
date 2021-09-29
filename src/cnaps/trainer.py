@@ -100,6 +100,7 @@ class CNAPTrainer():
                                               shuffle=True,
                                               num_workers=self.args.num_workers,
                                               pin_memory=True,
+                                              dataset_name=self.args.dataset,
                                               use_batch_collate=self.args.dataset != 'meta_dataset')
         elif self.args.task_sampler == 'd-DPP':
             logging.info("Using Dynamic DPP task sampler:\n\n")
@@ -156,7 +157,6 @@ class CNAPTrainer():
     def _train(self):
         best_value = None
         for epoch in range(self.args.num_epochs):
-            logging.info("In training!")
             self.metalearner.train(self.meta_train_dataloader,
                                    max_batches=self.args.num_batches,
                                    verbose=self.args.verbose,

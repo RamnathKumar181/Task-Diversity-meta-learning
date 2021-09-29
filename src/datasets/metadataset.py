@@ -1,13 +1,10 @@
 import os
 import torch
 import tensorflow.compat.v1 as tf
-import random
 
-from torch.utils.data.dataloader import default_collate
-from torchmeta.utils.data import (CombinationMetaDataset, ClassDataset,
-                                  CombinationRandomSampler, MetaDataLoader)
+from torchmeta.utils.data import (CombinationMetaDataset, ClassDataset)
 from collections import OrderedDict
-from itertools import accumulate, chain, combinations
+from itertools import accumulate
 from bisect import bisect_right
 
 from src.datasets.meta_dataset.reader import Reader
@@ -176,43 +173,3 @@ class MetaDatasetClassDataset(ClassDataset):
     @property
     def num_classes(self):
         return self._cum_num_classes[-1]
-
-
-class MetaDatasetRandomSampler(CombinationRandomSampler):
-    def __iter__(self):
-        num_classes_per_source = list(map(len, self.data_source.dataset._class_datasets))
-        num_classes_per_task = self.data_source.num_classes_per_task
-        iterator = chain(*[combinations(range(num_classes), num_classes_per_task)
-                           for num_classes in num_classes_per_source])
-
-        for _ in iterator:
-            source = random.randrange(len(self.data_source.dataset.sources))
-            num_classes = len(self.data_source.dataset._class_datasets[source])
-            offset = self.data_source.dataset._cum_num_classes[source]
-            indices = random.sample(range(num_classes), num_classes_per_task)
-            yield tuple(index + offset for index in indices)
-
-
-class MetaDatasetDataLoader(MetaDataLoader):
-    def __init__(self,
-                 dataset,
-                 batch_size=1,
-                 shuffle=True,
-                 num_workers=0,
-                 pin_memory=False,
-                 drop_last=False,
-                 timeout=0,
-                 worker_init_fn=None
-                 ):
-        super().__init__(dataset,
-                         batch_size=batch_size,
-                         shuffle=False,
-                         sampler=MetaDatasetRandomSampler(dataset),
-                         batch_sampler=None,
-                         num_workers=num_workers,
-                         collate_fn=default_collate,
-                         pin_memory=pin_memory,
-                         drop_last=drop_last,
-                         timeout=timeout,
-                         worker_init_fn=worker_init_fn
-                         )
