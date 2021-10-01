@@ -107,7 +107,7 @@ class DisjointMetaDataloader(MetaDataLoader):
             collate_fn = BatchMetaCollate(default_collate)
         else:
             collate_fn = default_collate
-            sampler = MetaDatasetRandomSampler(dataset)
+            sampler = MetaDatasetRandomSampler(dataset, batch_size)
 
         super(DisjointMetaDataloader, self).__init__(dataset,
                                                      batch_size=batch_size, shuffle=shuffle, sampler=sampler,

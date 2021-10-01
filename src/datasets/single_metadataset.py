@@ -51,6 +51,9 @@ class SingleMetaDataset(CombinationMetaDataset):
             dataset_transform=None
         )
 
+    def __getitem__(self, index):
+        return self.dataset[index]
+
 
 class SingleMetaDatasetClassDataset(ClassDataset):
     def __init__(
