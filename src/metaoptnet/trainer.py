@@ -261,7 +261,7 @@ class MetaOptNetTester():
                 self.metalearner.test_task_performance.values()))/len(list(self.metalearner.test_task_performance.values()))
             print(f"First 10 tasks: {list(self.metalearner.test_task_performance.keys())[:10]}")
             if self.config['sub_dataset'] is not None:
-                with open(os.path.join(dirname, f'task_performance_{self.config["sub_dataset_name"]}.json'), 'w') as f:
+                with open(os.path.join(dirname, f'task_performance_{self.config["sub_dataset"]}.json'), 'w') as f:
                     json.dump(str(self.metalearner.test_task_performance.items()), f, indent=2)
             else:
                 with open(os.path.join(dirname, 'task_performance.json'), 'w') as f:

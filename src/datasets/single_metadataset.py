@@ -71,6 +71,9 @@ class SingleMetaDatasetClassDataset(ClassDataset):
     ):
         self.root = os.path.expanduser(os.path.join(root, source))
         self.source = source
+        self.num_ways = num_ways
+        self.num_shots = num_shots
+        self.num_shots_test = num_shots_test
         super().__init__(
             meta_train=meta_train,
             meta_val=meta_val,

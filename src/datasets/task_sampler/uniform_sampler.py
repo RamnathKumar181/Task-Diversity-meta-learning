@@ -35,17 +35,24 @@ class CombinationRandomSampler(RandomSampler):
 
 class MetaDatasetRandomSampler(CombinationRandomSampler):
     def __iter__(self):
-        num_classes_per_source = list(map(len, self.data_source.dataset._class_datasets))
-        num_classes_per_task = self.data_source.num_classes_per_task
-        iterator = chain(*[combinations(range(num_classes), num_classes_per_task)
-                           for num_classes in num_classes_per_source])
+        try:
+            num_classes_per_source = list(map(len, self.data_source.dataset._class_datasets))
+            num_classes_per_task = self.data_source.num_classes_per_task
+            iterator = chain(*[combinations(range(num_classes), num_classes_per_task)
+                               for num_classes in num_classes_per_source])
 
-        for _ in iterator:
-            source = random.randrange(len(self.data_source.dataset.sources))
-            num_classes = len(self.data_source.dataset._class_datasets[source])
-            offset = self.data_source.dataset._cum_num_classes[source]
-            indices = random.sample(range(num_classes), num_classes_per_task)
-            yield tuple(index + offset for index in indices)
+            for _ in iterator:
+                source = random.randrange(len(self.data_source.dataset.sources))
+                num_classes = len(self.data_source.dataset._class_datasets[source])
+                offset = self.data_source.dataset._cum_num_classes[source]
+                indices = random.sample(range(num_classes), num_classes_per_task)
+                yield tuple(index + offset for index in indices)
+        except Exception:
+            num_classes_per_task = self.data_source.num_classes_per_task
+            num_classes = len(self.data_source.dataset._class_datasets)
+            for _ in combinations(range(num_classes), num_classes_per_task):
+                indices = random.sample(range(num_classes), num_classes_per_task)
+                yield tuple(index for index in indices)
 
 
 class BatchMetaCollate(object):
