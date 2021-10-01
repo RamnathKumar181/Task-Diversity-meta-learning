@@ -18,7 +18,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Quiet the TensorFlow warnings
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)  # Quiet the TensorFlow warnings
 
 
-tf.config.threading.set_intra_op_parallelism_threads(1)
+tf.config.threading.set_intra_op_parallelism_threads(5)
 tf.config.threading.set_inter_op_parallelism_threads(112)
 
 
