@@ -7,10 +7,13 @@ from src.datasets.meta_dataset.reader import Reader
 from src.datasets.meta_dataset.dataset_spec import load_dataset_spec
 from src.datasets.meta_dataset.learning_spec import Split
 from src.datasets.meta_dataset.decoder import ImageDecoder
-from src.datasets.metadataset import SOURCES, MetaDataset
+from src.datasets.metadataset import SOURCES
+import torch
+from collections import OrderedDict
+from itertools import islice
 
 
-class SingleMetaDataset(MetaDataset):
+class SingleMetaDataset(CombinationMetaDataset):
     def __init__(
         self,
         root,
@@ -50,6 +53,9 @@ class SingleMetaDatasetClassDataset(ClassDataset):
         self,
         root,
         source,
+        num_ways=5,
+        num_shots=1,
+        num_shots_test=15,
         meta_train=False,
         meta_val=False,
         meta_test=False,
@@ -96,14 +102,37 @@ class SingleMetaDatasetClassDataset(ClassDataset):
         )
         class_datasets = reader.construct_class_datasets()
         class_datasets = [dataset.map(image_decode) for dataset in class_datasets]
-        self._class_datasets = [dataset.as_numpy_iterator()
-                                for dataset in class_datasets]
+        self._class_datasets = class_datasets
+
+    def get_images(self, index, images_needed):
+        images_np = list(
+            islice(self._class_datasets[index].as_numpy_iterator(), images_needed))
+        while len(images_np) != images_needed:
+            images_np += images_np[:(images_needed-len(images_np))]
+        images = [torch.from_numpy(image) for image in images_np]
+        return images
 
     def __getitem__(self, index):
-        return self._class_datasets[index]
+        support_images, query_images = [], []
+        targets = torch.randperm(self.num_ways).unsqueeze(1)
+        tasks = torch.tensor(index).unsqueeze(1)
+        for class_id in index:
+            images = self.get_images(class_id, self.num_shots+self.num_shots_test)
+            support_images.extend(images[:self.num_shots])
+            query_images.extend(images[self.num_shots:])
 
-    def _get_next(self, index):
-        return next(self[index])
+        support_images = torch.stack(support_images, dim=0)
+        support_labels = targets.repeat((1, self.num_shots)).view(-1)
+        support_tasks = tasks.repeat((1, self.num_shots)).view(-1)
+
+        query_images = torch.stack(query_images, dim=0)
+        query_labels = targets.repeat((1, self.num_shots_test)).view(-1)
+        query_tasks = tasks.repeat((1, self.num_shots_test)).view(-1)
+
+        return OrderedDict([
+            ('train', (support_images, support_labels, support_tasks)),
+            ('test', (query_images, query_labels, query_tasks))
+        ])
 
     @property
     def num_classes(self):

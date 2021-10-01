@@ -115,11 +115,11 @@ class MetaDatasetClassDataset(ClassDataset):
             class_augmentations=None
         )
         if self.meta_train:
-            self.split = Split.TRAIN
+            split = Split.TRAIN
         elif self.meta_val:
-            self.split = Split.VALID
+            split = Split.VALID
         elif self.meta_test:
-            self.split = Split.TEST
+            split = Split.TEST
         else:
             raise ValueError('Unknown split')
         self.sources = SOURCES[self.meta_split]
@@ -141,7 +141,7 @@ class MetaDatasetClassDataset(ClassDataset):
 
             reader = Reader(
                 dataset_spec,
-                split=self.split,
+                split=split,
                 shuffle_buffer_size=0,
                 read_buffer_size_bytes=None,
                 num_prefetch=0,
@@ -167,8 +167,6 @@ class MetaDatasetClassDataset(ClassDataset):
             islice(self._class_datasets[source][index].as_numpy_iterator(), images_needed))
         while len(images_np) != images_needed:
             images_np += images_np[:(images_needed-len(images_np))]
-
-        logging.info(f"Images size: {len(images_np)}")
         images = [torch.from_numpy(image) for image in images_np]
         return images
 
