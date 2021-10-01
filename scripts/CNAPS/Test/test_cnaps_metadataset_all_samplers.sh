@@ -5,7 +5,7 @@
 #SBATCH --gres=gpu:2
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=30G
-#SBATCH --array=0-7
+#SBATCH --array=0-5
 
 source ../env/bin/activate
 ulimit -n 50000
