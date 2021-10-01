@@ -4,7 +4,7 @@
 #SBATCH --error=../logs/test_metaoptnet_meta_dataset_%a.err
 #SBATCH --gres=gpu:2
 #SBATCH --cpus-per-task=2
-#SBATCH --mem=128G
+#SBATCH --mem=30G
 #SBATCH --array=0-7
 
 source ../env/bin/activate

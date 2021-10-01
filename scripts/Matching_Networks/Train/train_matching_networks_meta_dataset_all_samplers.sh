@@ -2,10 +2,10 @@
 #SBATCH --job-name=matching_networks_meta_dataset
 #SBATCH --output=../logs/matching_networks_meta_dataset_%a.out
 #SBATCH --error=../logs/matching_networks_meta_dataset_%a.err
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=2
-#SBATCH --mem=128G
-#SBATCH --array=0-7
+#SBATCH --mem=30G
+#SBATCH --array=0-5,7
 
 source ../env/bin/activate
 ulimit -n 50000
