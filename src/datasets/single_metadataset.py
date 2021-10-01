@@ -13,6 +13,10 @@ from collections import OrderedDict
 from itertools import islice
 
 
+tf.config.threading.set_intra_op_parallelism_threads(1)
+tf.config.threading.set_inter_op_parallelism_threads(112)
+
+
 class SingleMetaDataset(CombinationMetaDataset):
     def __init__(
         self,
