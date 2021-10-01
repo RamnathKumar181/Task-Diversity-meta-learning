@@ -161,7 +161,7 @@ class BatchMetaDataLoaderdDPP(MetaDataLoader):
             collate_fn = BatchMetaCollate(default_collate)
         else:
             collate_fn = default_collate
-            sampler = MetaDatasetRandomSampler(dataset)
+            sampler = MetaDatasetRandomSampler(dataset, batch_size)
 
         super(BatchMetaDataLoaderdDPP, self).__init__(dataset,
                                                       batch_size=batch_size, shuffle=shuffle, sampler=sampler, num_workers=num_workers,

@@ -52,7 +52,7 @@ class MetaDatasetRandomSampler(CombinationRandomSampler):
             num_classes = len(self.data_source.dataset._class_datasets[source])
             offset = self.data_source.dataset._cum_num_classes[source]
             indices = random.sample(range(num_classes), num_classes_per_task)
-            x.append(index + offset for index in indices)
+            x.append(list(index + offset for index in indices))
         for _ in iterator:
             random.shuffle(x)
             for j in range(self.batch_size):
