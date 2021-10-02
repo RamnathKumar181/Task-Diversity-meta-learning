@@ -49,6 +49,8 @@ def to_latex(
     threshold=0.05,
     positive_fmt='{value:s} +',  # TODO: Have different formats when the results
     negative_fmt='{value:s} -'   # of sampler are better or worse than uniform
+
+
 ):
     """Format the results to LaTeX. This uses the result of the paired difference
     t-test to assess the statistical significance of the result (i.e. the results
@@ -82,6 +84,7 @@ def load_results(filename):
     data = [(tuple(task), value) for (task, value) in data
             if isinstance(task, (list, tuple))]
 
+    print(filename, len(data))
     return data
 
 

@@ -223,10 +223,15 @@ class Reptile(object):
 
         loss_list = []
         acc_list = []
+
         with tqdm(dataloader, total=max_batches) as pbar:
             for batch_idx, batch in enumerate(pbar):
-                if batch_idx >= max_batches:
-                    break
+                if self.log_test_tasks:
+                    if len(self.test_task_performance) == 1024:
+                        break
+                else:
+                    if batch_idx >= max_batches:
+                        break
                 loss_log, acc_log = self.outer_loop(batch, train=False)
 
                 loss_list.append(loss_log)

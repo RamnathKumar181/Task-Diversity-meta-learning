@@ -50,6 +50,7 @@ class MetaDatasetRandomSampler(CombinationRandomSampler):
         except Exception:
             num_classes_per_task = self.data_source.num_classes_per_task
             num_classes = len(self.data_source.dataset._class_datasets)
+            print(num_classes)
             for _ in combinations(range(num_classes), num_classes_per_task):
                 indices = random.sample(range(num_classes), num_classes_per_task)
                 yield tuple(index for index in indices)

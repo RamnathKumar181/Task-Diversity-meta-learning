@@ -164,6 +164,7 @@ def test_model(args, dataset_name=None):
         config['dataset'] = args.dataset
         config['log_test_tasks'] = args.log_test_tasks
         config['sub_dataset'] = args.sub_dataset
+        config['batch_size'] = args.batch_size
         if not args.train and (dataset_name is None or dataset_name == 'ilsvrc_2012'):
             wandb.init(project='Task_Diversity', config=config, settings=wandb.Settings(start_method='thread'),
                        name=config['exp_name'], reinit=False)

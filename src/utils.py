@@ -209,46 +209,6 @@ def get_benchmark_by_name(model_name,
             loss_function = F.cross_entropy
         elif model_name == 'reptile':
             model = ModelConvMiniImagenetReptile(num_ways, hidden_size=hidden_size)
-            # meta_train_dataset = MiniImagenet(folder,
-            #                                   transform=transforms.Compose([
-            #                                       transforms.RandomCrop(80, padding=8),
-            #                                       transforms.ColorJitter(
-            #                                           brightness=0.4, contrast=0.4, saturation=0.4),
-            #                                       transforms.RandomHorizontalFlip(),
-            #                                       transforms.ToTensor(),
-            #                                       transforms.Normalize(
-            #                                           np.array([0.485, 0.456, 0.406]),
-            #                                           np.array([0.229, 0.224, 0.225])),
-            #                                   ]),
-            #                                   target_transform=Categorical(num_ways),
-            #                                   num_classes_per_task=num_ways,
-            #                                   meta_train=True,
-            #                                   dataset_transform=dataset_transform,
-            #                                   download=True)
-            # meta_val_dataset = MiniImagenet(folder,
-            #                                 transform=transforms.Compose([
-            #                                     transforms.CenterCrop(80),
-            #                                     transforms.ToTensor(),
-            #                                     transforms.Normalize(
-            #                                         np.array([0.485, 0.456, 0.406]),
-            #                                         np.array([0.229, 0.224, 0.225]))
-            #                                 ]),
-            #                                 target_transform=Categorical(num_ways),
-            #                                 num_classes_per_task=num_ways,
-            #                                 meta_val=True,
-            #                                 dataset_transform=dataset_transform)
-            # meta_test_dataset = MiniImagenet(folder,
-            #                                  transform=transforms.Compose([
-            #                                      transforms.CenterCrop(80),
-            #                                      transforms.ToTensor(),
-            #                                      transforms.Normalize(
-            #                                          np.array([0.485, 0.456, 0.406]),
-            #                                          np.array([0.229, 0.224, 0.225]))
-            #                                  ]),
-            #                                  target_transform=Categorical(num_ways),
-            #                                  num_classes_per_task=num_ways,
-            #                                  meta_test=True,
-            #                                  dataset_transform=dataset_transform)
             loss_function = F.cross_entropy
         elif model_name == 'protonet':
             model = Protonet_MiniImagenet()

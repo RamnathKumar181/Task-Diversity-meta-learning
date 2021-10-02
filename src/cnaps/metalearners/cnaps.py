@@ -194,10 +194,18 @@ class CNAPs(object):
         self.model.eval()
         while num_batches < max_batches:
             for batch in dataloader:
-                if num_batches >= max_batches:
-                    break
+                if self.log_test_tasks:
+                    if len(self.test_task_performance) == 1024:
+                        break
+                    else:
+                        num_batches -= 1
+                else:
+                    if num_batches >= max_batches:
+                        break
                 _, results = self.get_loss(batch)
                 yield results
                 torch.cuda.empty_cache()
                 gc.collect()
                 num_batches += 1
+            if self.log_test_tasks and len(self.test_task_performance) == 1024:
+                break
