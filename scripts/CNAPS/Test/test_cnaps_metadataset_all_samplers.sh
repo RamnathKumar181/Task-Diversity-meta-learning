@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=tets_cnaps_meta_dataset
+#SBATCH --job-name=test_cnaps_meta_dataset
 #SBATCH --output=../logs/test_cnaps_meta_dataset_%a.out
 #SBATCH --error=../logs/test_cnaps_meta_dataset_%a.err
 #SBATCH --gres=gpu:2
