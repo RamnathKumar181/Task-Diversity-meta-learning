@@ -7,7 +7,6 @@ from src.datasets.meta_dataset.reader import Reader
 from src.datasets.meta_dataset.dataset_spec import load_dataset_spec
 from src.datasets.meta_dataset.learning_spec import Split
 from src.datasets.meta_dataset.decoder import ImageDecoder
-from src.datasets.metadataset import SOURCES
 import torch
 from collections import OrderedDict
 from itertools import islice
@@ -15,6 +14,15 @@ from itertools import islice
 
 tf.config.threading.set_intra_op_parallelism_threads(5)
 tf.config.threading.set_inter_op_parallelism_threads(112)
+
+SOURCES = {
+    'train': ["ilsvrc_2012", "omniglot", "aircraft", "cu_birds", "dtd", "quickdraw", "fungi",
+              "vgg_flower", "traffic_sign", "mscoco"],
+    'val': ["ilsvrc_2012", "omniglot", "aircraft", "cu_birds", "dtd", "quickdraw", "fungi",
+            "vgg_flower", "traffic_sign", "mscoco"],
+    'test': ["ilsvrc_2012", "omniglot", "aircraft", "cu_birds", "dtd", "quickdraw", "fungi",
+             "vgg_flower", "traffic_sign", "mscoco"]
+}
 
 
 class SingleMetaDataset(CombinationMetaDataset):
