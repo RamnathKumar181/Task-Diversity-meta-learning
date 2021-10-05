@@ -195,7 +195,7 @@ class MetaOptNet(object):
                     if num_batches >= max_batches:
                         break
                 batch = tensors_to_device(batch, device=self.device)
-                _, results = self.get_outer_loss(batch)
+                _, results = self.get_loss(batch)
                 yield results
                 num_batches += 1
             if self.log_test_tasks and len(self.test_task_performance) == 1024:

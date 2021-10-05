@@ -220,24 +220,26 @@ class Reptile(object):
 
     @torch.no_grad()
     def valid(self, dataloader, max_batches=150):
-
+        num_batches = 0
         loss_list = []
         acc_list = []
-
-        with tqdm(dataloader, total=max_batches) as pbar:
-            for batch_idx, batch in enumerate(pbar):
+        while num_batches < max_batches:
+            for batch in dataloader:
                 if self.log_test_tasks:
                     if len(self.test_task_performance) == 1024:
                         break
+                    else:
+                        num_batches -= 1
                 else:
-                    if batch_idx >= max_batches:
+                    if num_batches >= max_batches:
                         break
                 loss_log, acc_log = self.outer_loop(batch, train=False)
-
                 loss_list.append(loss_log)
                 acc_list.append(acc_log)
-                pbar.set_description('loss = {:.4f} || acc={:.4f}'.format(
-                    np.mean(loss_list), np.mean(acc_list)))
+
+                num_batches += 1
+            if self.log_test_tasks and len(self.test_task_performance) == 1024:
+                break
 
         loss = np.round(np.mean(loss_list), 4)
         acc = np.round(np.mean(acc_list), 4)
