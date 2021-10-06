@@ -41,7 +41,9 @@ RECORDS=${rootdir}/records
 LOGS=${FLAGS}/logs
 
 mkdir -p $FLAGS $DATASRC $SPLITS $RECORDS $LOGS
-mkdir -p /network/projects/r/ramnath.kumar/meta_dataset/records/ /network/projects/r/ramnath.kumar/meta_dataset/splits/
+
+# Overwrite PATH_TO_RECORDS and PATH_TO_SPLITS
+mkdir -p $PATH_TO_RECORDS $PATH_TO_SPLITS
 
 logfile=${LOGS}/log.$(date "+%F.%H-%M-%S").txt
 exec &> >(tee -a $logfile)
@@ -184,8 +186,8 @@ if [ $SLURM_ARRAY_TASK_ID -eq 1 ]; then
         https://github.com/brendenlake/omniglot/raw/master/python/images_evaluation.zip
       touch ${done_flag}
     fi
-    cp -r $RECORDS /network/projects/r/ramnath.kumar/meta_dataset/
-    cp -r $SPLITS /network/projects/r/ramnath.kumar/meta_dataset/
+    cp -r $RECORDS $PATH_TO_RECORDS
+    cp -r $SPLITS $PATH_TO_SPLITS
     echo "Successfully downloaded omniglot"
 fi
 
@@ -200,8 +202,8 @@ if [ $SLURM_ARRAY_TASK_ID -eq 2 ]; then
         http://www.robots.ox.ac.uk/~vgg/data/fgvc-aircraft/archives/fgvc-aircraft-2013b.tar.gz
       touch ${done_flag}
     fi
-    cp -r $RECORDS /network/projects/r/ramnath.kumar/meta_dataset/
-    cp -r $SPLITS /network/projects/r/ramnath.kumar/meta_dataset/
+    cp -r $RECORDS $PATH_TO_RECORDS
+    cp -r $SPLITS $PATH_TO_SPLITS
     echo "Successfully downloaded aircraft"
 fi
 
@@ -221,8 +223,8 @@ if [ $SLURM_ARRAY_TASK_ID -eq 3 ]; then
       run_python $dataset_name $folder_name
       touch ${done_flag}
     fi
-    cp -r $RECORDS /network/projects/r/ramnath.kumar/meta_dataset/
-    cp -r $SPLITS /network/projects/r/ramnath.kumar/meta_dataset/
+    cp -r $RECORDS $PATH_TO_RECORDS
+    cp -r $SPLITS $PATH_TO_SPLITS
     echo "Successfully downloaded cu_birds"
 fi
 
@@ -237,8 +239,8 @@ if [ $SLURM_ARRAY_TASK_ID -eq 4 ]; then
         https://www.robots.ox.ac.uk/~vgg/data/dtd/download/dtd-r1.0.1.tar.gz
       touch ${done_flag}
     fi
-    cp -r $RECORDS /network/projects/r/ramnath.kumar/meta_dataset/
-    cp -r $SPLITS /network/projects/r/ramnath.kumar/meta_dataset/
+    cp -r $RECORDS $PATH_TO_RECORDS
+    cp -r $SPLITS $PATH_TO_SPLITS
     echo "Successfully downloaded dtd"
 fi
 
@@ -253,8 +255,8 @@ if [ $SLURM_ARRAY_TASK_ID -eq 5 ]; then
       run_python quickdraw quickdraw
       touch ${done_flag}
     fi
-    cp -r $RECORDS /network/projects/r/ramnath.kumar/meta_dataset/
-    cp -r $SPLITS /network/projects/r/ramnath.kumar/meta_dataset/
+    cp -r $RECORDS $PATH_TO_RECORDS
+    cp -r $SPLITS $PATH_TO_SPLITS
     echo "Successfully downloaded quickdraw"
 fi
 
@@ -270,8 +272,8 @@ if [ $SLURM_ARRAY_TASK_ID -eq 6 ]; then
         "https://labs.gbif.org/fgvcx/2018/train_val_annotations.tgz"
       touch ${done_flag}
     fi
-    cp -r $RECORDS /network/projects/r/ramnath.kumar/meta_dataset/
-    cp -r $SPLITS /network/projects/r/ramnath.kumar/meta_dataset/
+    cp -r $RECORDS $PATH_TO_RECORDS
+    cp -r $SPLITS $PATH_TO_SPLITS
     echo "Successfully downloaded fungi"
 fi
 
@@ -287,8 +289,8 @@ if [ $SLURM_ARRAY_TASK_ID -eq 7 ]; then
         http://www.robots.ox.ac.uk/~vgg/data/flowers/102/imagelabels.mat
       touch ${done_flag}
     fi
-    cp -r $RECORDS /network/projects/r/ramnath.kumar/meta_dataset/
-    cp -r $SPLITS /network/projects/r/ramnath.kumar/meta_dataset/
+    cp -r $RECORDS $PATH_TO_RECORDS
+    cp -r $SPLITS $PATH_TO_SPLITS
     echo "Successfully downloaded vgg_flower"
 fi
 
@@ -303,8 +305,8 @@ if [ $SLURM_ARRAY_TASK_ID -eq 8 ]; then
         https://sid.erda.dk/public/archives/daaeac0d7ce1152aea9b61d9f1e19370/GTSRB_Final_Training_Images.zip
       touch ${done_flag}
     fi
-    cp -r $RECORDS /network/projects/r/ramnath.kumar/meta_dataset/
-    cp -r $SPLITS /network/projects/r/ramnath.kumar/meta_dataset/
+    cp -r $RECORDS $PATH_TO_RECORDS
+    cp -r $SPLITS $PATH_TO_SPLITS
     echo "Successfully downloaded traffic_sign"
 fi
 
@@ -320,8 +322,8 @@ if [ $SLURM_ARRAY_TASK_ID -eq 9 ]; then
         http://images.cocodataset.org/annotations/annotations_trainval2017.zip
       touch ${done_flag}
     fi
-    cp -r $RECORDS /network/projects/r/ramnath.kumar/meta_dataset/
-    cp -r $SPLITS /network/projects/r/ramnath.kumar/meta_dataset/
+    cp -r $RECORDS $PATH_TO_RECORDS
+    cp -r $SPLITS $PATH_TO_SPLITS
     echo "Successfully downloaded mscoco"
 fi
 
