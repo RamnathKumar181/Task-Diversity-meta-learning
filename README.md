@@ -1,4 +1,4 @@
-# Task-Diversity
+# Task-Diversity in meta-learning
 
 ### Getting started
 To avoid any conflict with your existing Python setup, it is suggested to work in a virtual environment with [`virtualenv`](https://docs.python-guide.org/dev/virtualenvs/). To install `virtualenv`:
