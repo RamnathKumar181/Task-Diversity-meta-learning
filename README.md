@@ -28,7 +28,7 @@ Our model can be trained on all samplers in a parallel fashion as follows:
 ```bash
 sbatch scripts/MAML/Train/train_maml_<dataset>_all_samplers.sh
 ```
-Similarly, our models can be tested on a fix set of tasks in a parallel fashion as follows:
+Similarly, our models can be tested on a fixed set of tasks in a parallel fashion as follows:
 ```bash
 sbatch scripts/MAML/Test/test_maml_<dataset>_all_samplers.sh
 ```
