@@ -44,14 +44,14 @@ python -m src.analysis.py <path_to_task_json> -O <path_to_output_json>
 
 # Paper Citation
 
-If you find our codes useful, please cite the respective paper:
+If you find our codes useful, and consider citing our respective paper:
 ```
 Add arxiv link here
 ```
 
 # References
 
-Our repository makes use of various open-source codes. If you find the respective codes useful, please cite the respective papers:
+Our repository makes use of various open-source codes. If you find the respective codes useful, do cite their respective papers:
 
 ## Dataset
 
@@ -68,7 +68,7 @@ Our repository makes use of various open-source codes. If you find the respectiv
 }
 ```
 
-### *Mini*ImageNet
+### *mini*ImageNet
 
 ```
 @article{ravi2016optimization,
