@@ -44,7 +44,7 @@ python -m src.analysis.py <path_to_task_json> -O <path_to_output_json>
 
 # Paper Citation
 
-If you find our codes useful, and consider citing our respective paper:
+If you find our codes useful, do consider citing our paper:
 ```
 Add arxiv link here
 ```
