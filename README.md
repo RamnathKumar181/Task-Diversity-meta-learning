@@ -53,53 +53,6 @@ Add arxiv link here
 
 Our repository makes use of various open-source codes. If you find the respective codes useful, do cite their respective papers:
 
-## Dataset
-
-### Omniglot
-
-```
-@inproceedings{lake2011one,
-  title={One shot learning of simple visual concepts},
-  author={Lake, Brenden and Salakhutdinov, Ruslan and Gross, Jason and Tenenbaum, Joshua},
-  booktitle={Proceedings of the annual meeting of the cognitive science society},
-  volume={33},
-  number={33},
-  year={2011}
-}
-```
-
-### *mini*ImageNet
-
-```
-@article{ravi2016optimization,
-  title={Optimization as a model for few-shot learning},
-  author={Ravi, Sachin and Larochelle, Hugo},
-  year={2016}
-}
-```
-
-### *tiered*ImageNet
-
-```
-@article{ren2018meta,
-  title={Meta-learning for semi-supervised few-shot classification},
-  author={Ren, Mengye and Triantafillou, Eleni and Ravi, Sachin and Snell, Jake and Swersky, Kevin and Tenenbaum, Joshua B and Larochelle, Hugo and Zemel, Richard S},
-  journal={arXiv preprint arXiv:1803.00676},
-  year={2018}
-}
-```
-
-### Meta-Dataset
-
-```
-@article{triantafillou2019meta,
-  title={Meta-dataset: A dataset of datasets for learning to learn from few examples},
-  author={Triantafillou, Eleni and Zhu, Tyler and Dumoulin, Vincent and Lamblin, Pascal and Evci, Utku and Xu, Kelvin and Goroshin, Ross and Gelada, Carles and Swersky, Kevin and Manzagol, Pierre-Antoine and others},
-  journal={arXiv preprint arXiv:1903.03096},
-  year={2019}
-}
-```
-
 ## Models
 
 ### Prototypical Network
@@ -176,6 +129,51 @@ Our repository makes use of various open-source codes. If you find the respectiv
 ```
 
 ## Others
+
+### Omniglot
+
+```
+@inproceedings{lake2011one,
+  title={One shot learning of simple visual concepts},
+  author={Lake, Brenden and Salakhutdinov, Ruslan and Gross, Jason and Tenenbaum, Joshua},
+  booktitle={Proceedings of the annual meeting of the cognitive science society},
+  volume={33},
+  number={33},
+  year={2011}
+}
+```
+
+### *mini*ImageNet
+
+```
+@article{ravi2016optimization,
+  title={Optimization as a model for few-shot learning},
+  author={Ravi, Sachin and Larochelle, Hugo},
+  year={2016}
+}
+```
+
+### *tiered*ImageNet
+
+```
+@article{ren2018meta,
+  title={Meta-learning for semi-supervised few-shot classification},
+  author={Ren, Mengye and Triantafillou, Eleni and Ravi, Sachin and Snell, Jake and Swersky, Kevin and Tenenbaum, Joshua B and Larochelle, Hugo and Zemel, Richard S},
+  journal={arXiv preprint arXiv:1803.00676},
+  year={2018}
+}
+```
+
+### Meta-Dataset
+
+```
+@article{triantafillou2019meta,
+  title={Meta-dataset: A dataset of datasets for learning to learn from few examples},
+  author={Triantafillou, Eleni and Zhu, Tyler and Dumoulin, Vincent and Lamblin, Pascal and Evci, Utku and Xu, Kelvin and Goroshin, Ross and Gelada, Carles and Swersky, Kevin and Manzagol, Pierre-Antoine and others},
+  journal={arXiv preprint arXiv:1903.03096},
+  year={2019}
+}
+```
 
 ### Torchmeta
 
