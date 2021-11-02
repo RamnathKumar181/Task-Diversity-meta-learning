@@ -22,7 +22,7 @@ Omniglot, *mini*ImageNet, and *tiered*ImageNet will be downloaded automatically 
 
 ### Training & Testing
 
-We have carefully organized our codes under ```scripts```.
+We have carefully organized our codes under [`scripts`](scripts).
 
 Our model can be trained on all samplers in a parallel fashion as follows:
 ```bash
