@@ -1,11 +1,4 @@
 #!/bin/bash
-#SBATCH --job-name=test_metaoptnet_tiered_imagenet
-#SBATCH --output=../logs/test_metaoptnet_tiered_imagenet_%a.out
-#SBATCH --error=../logs/test_metaoptnet_tiered_imagenet_%a.err
-#SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=2
-#SBATCH --mem=20G
-#SBATCH --array=2-7
 
 source ../env/bin/activate
 cd ..

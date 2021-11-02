@@ -1,11 +1,4 @@
 #!/bin/bash
-#SBATCH --job-name=protonet_omniglot_20
-#SBATCH --output=../logs/protonet_omniglot_20_%a.out
-#SBATCH --error=../logs/protonet_omniglot_20_%a.err
-#SBATCH --gres=gpu:2
-#SBATCH --cpus-per-task=2
-#SBATCH --mem=20G
-#SBATCH --array=0-7
 
 source ../env/bin/activate
 cd ..

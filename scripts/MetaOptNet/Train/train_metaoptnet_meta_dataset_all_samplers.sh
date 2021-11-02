@@ -1,17 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=metaoptnet_meta_dataset
-#SBATCH --output=../logs/metaoptnet_meta_dataset_%a.out
-#SBATCH --error=../logs/metaoptnet_meta_dataset_%a.err
-#SBATCH --gres=gpu:2
-#SBATCH --cpus-per-task=2
-#SBATCH --mem=30G
-#SBATCH --array=0-5
 
 source ../env/bin/activate
 ulimit -n 50000
 
-cp -r /network/projects/r/ramnath.kumar/meta_dataset/records $SLURM_TMPDIR
-cp -r ../data/meta_dataset/records $SLURM_TMPDIR
+cp -r <PATH_TO_DATA> $SLURM_TMPDIR
 
 echo "Finished moving data"
 

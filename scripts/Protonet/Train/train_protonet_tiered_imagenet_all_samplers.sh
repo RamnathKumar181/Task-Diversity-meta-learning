@@ -1,11 +1,4 @@
 #!/bin/bash
-#SBATCH --job-name=protonet_tiered_imagenet
-#SBATCH --output=../logs/protonet_tiered_imagenet_%a.out
-#SBATCH --error=../logs/protonet_tiered_imagenet_%a.err
-#SBATCH --gres=gpu:2
-#SBATCH --cpus-per-task=2
-#SBATCH --mem=20G
-#SBATCH --array=6-7
 
 source ../env/bin/activate
 cd ..

@@ -1,12 +1,4 @@
 #!/bin/bash
-#SBATCH --partition=unkillable
-#SBATCH --job-name=test_protonet_tiered_imagenet
-#SBATCH --output=../logs/test_protonet_tiered_imagenet_%a.out
-#SBATCH --error=../logs/test_protonet_tiered_imagenet_%a.err
-#SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=2
-#SBATCH --mem=10G
-#SBATCH --array=0-7
 
 source ../env/bin/activate
 cd ..

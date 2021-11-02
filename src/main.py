@@ -166,7 +166,7 @@ def test_model(args, dataset_name=None):
         config['sub_dataset'] = args.sub_dataset
         config['batch_size'] = args.batch_size
         if not args.train and (dataset_name is None or dataset_name == 'ilsvrc_2012'):
-            wandb.init(project='Task_Diversity', config=config, settings=wandb.Settings(start_method='thread'),
+            wandb.init(project='Task_Diversity', entity='td_ml', config=config, settings=wandb.Settings(start_method='thread'),
                        name=config['exp_name'], reinit=False)
             wandb.config = config
         if config['model'] == 'maml':
@@ -220,7 +220,7 @@ if __name__ == '__main__':
         args.batch_size = 1
     args.exp_name = f"{args.exp_name}_{args.task_sampler}_sampler"
     if args.train:
-        wandb.init(project='Task_Diversity', config=args, name=args.exp_name,
+        wandb.init(project='Task_Diversity', entity='td_ml', config=args, name=args.exp_name,
                    settings=wandb.Settings(start_method='thread'), reinit=False)
         log = Logger(args.runs)
         log.reset(args.runs, info="Validation Accuracy")

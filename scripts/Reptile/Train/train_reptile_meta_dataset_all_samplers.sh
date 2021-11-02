@@ -1,11 +1,4 @@
 #!/bin/bash
-#SBATCH --job-name=reptile_meta_dataset
-#SBATCH --output=../logs/reptile_meta_dataset_%a.out
-#SBATCH --error=../logs/reptile_meta_dataset_%a.err
-#SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=2
-#SBATCH --mem=30G
-#SBATCH --array=0-5
 
 source ../env/bin/activate
 ulimit -n 50000

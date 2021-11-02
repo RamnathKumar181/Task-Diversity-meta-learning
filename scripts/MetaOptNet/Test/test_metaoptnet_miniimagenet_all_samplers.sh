@@ -1,11 +1,4 @@
 #!/bin/bash
-#SBATCH --job-name=test_metaoptnet_miniimagenet
-#SBATCH --output=../logs/test_metaoptnet_miniimagenet_%a.out
-#SBATCH --error=../logs/test_metaoptnet_miniimagenet_%a.err
-#SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=2
-#SBATCH --mem=20G
-#SBATCH --array=0-7
 
 source ../env/bin/activate
 cd ..
