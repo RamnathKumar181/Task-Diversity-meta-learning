@@ -15,7 +15,7 @@ pip install -r requirements.txt
 
 ### Datasets
 
-Omniglot and MiniImagenet will be downloaded automatically upon runnning the scripts, with the help of torch-meta. To download meta_dataset, follow the following steps:
+Omniglot, *mini*ImageNet, and *tiered*ImageNet will be downloaded automatically upon runnning the scripts, with the help of [pytorch-meta](https://github.com/tristandeleu/pytorch-meta). To download meta-dataset, follow the following steps:
 * Download ILSVRC2012 (by creating an account [here](https://image-net.org/challenges/LSVRC/2012/index.php) and downloading `ILSVRC2012.tar`) and Cu_birds2012 (downloading from `http://www.vision.caltech.edu/visipedia-data/CUB-200-2011/CUB_200_2011.tgz`) separately.
 * Run `sbatch scripts/download_meta_dataset/install_meta_dataset_parallel.sh` to download and prune all datasets in a parallel fashion. Note that, due to memory constraints, we are saving ILSVRC2012 in a seperate directory from the other 9 datasets. While running the scripts to train the model, make sure to copy all the datasets to a single directory.
 * That's it, you are good to go! :)
@@ -172,5 +172,19 @@ Our repository makes use of various open-source codes. If you find the respectiv
   booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
   pages={10657--10665},
   year={2019}
+}
+```
+
+## Others
+
+### Torchmeta
+
+```
+@misc{deleu2019torchmeta,
+  title={{Torchmeta: A Meta-Learning library for PyTorch}},
+  author={Deleu, Tristan and W\"urfl, Tobias and Samiei, Mandana and Cohen, Joseph Paul and Bengio, Yoshua},
+  year={2019},
+  url={https://arxiv.org/abs/1909.06576},
+  note={Available at: https://github.com/tristandeleu/pytorch-meta}
 }
 ```
