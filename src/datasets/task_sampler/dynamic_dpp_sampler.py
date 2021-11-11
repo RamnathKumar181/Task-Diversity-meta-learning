@@ -183,12 +183,6 @@ class dDPP(object):
         self.dpp_threshold = dpp_threshold
         self.model_name = model_name
         self.use_batch_collate = use_batch_collate
-        self.disjoint_dataloader = DisjointMetaDataloader(self.dataset,
-                                                          batch_size=256,
-                                                          shuffle=False,
-                                                          num_workers=8,
-                                                          pin_memory=True,
-                                                          use_batch_collate=use_batch_collate)
         self.model = None
         self.DPP = None
 
@@ -197,7 +191,12 @@ class dDPP(object):
 
     def get_task_embedding(self):
         task_embedding = {}
-        for batch in self.disjoint_dataloader:
+        for batch in DisjointMetaDataloader(self.dataset,
+                                            batch_size=256,
+                                            shuffle=False,
+                                            num_workers=8,
+                                            pin_memory=True,
+                                            use_batch_collate=self.use_batch_collate):
             with torch.no_grad():
                 if self.model_name == 'cnaps':
                     for task_id, (train_inputs, train_targets, task) \

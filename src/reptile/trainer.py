@@ -13,7 +13,7 @@ from collections import OrderedDict
 class ReptileTrainer():
     def __init__(self, args):
         self.args = args
-        self.highest_val = 0
+        self.highest_val = None
         self.device = self._device()
         logging.basicConfig(level=logging.DEBUG if self.args.verbose else logging.INFO)
         logging.info(f"Configuration while training: {args}")
@@ -162,16 +162,30 @@ class ReptileTrainer():
         res['valid_loss'] = valid_loss
         res['valid_acc'] = valid_acc
 
-        if res['valid_acc'] > self.highest_val:
-            self.highest_val = res['valid_acc']
-            return res, True
+        if self.args.dataset in ["sinusoid", "sinusoid_line", "harmonic"]:
+            if ((self.highest_val is None)
+                    or (self.highest_val > res['valid_loss'])):
+                self.highest_val = res['valid_loss']
+                return res, True
+            else:
+                return res, False
         else:
-            return res, False
+            if ((self.highest_val is None)
+                    or (self.highest_val < res['valid_acc'])):
+                self.highest_val = res['valid_acc']
+                return res, True
+            else:
+                return res, False
 
     def _train(self):
         for epoch in range(self.args.num_epochs):
             res, is_best = self.run_epoch(epoch)
-            wandb.log({"Accuracy": res['valid_acc']})
+            if (epoch+1) % self.args.log_interval == 0:
+                if self.args.dataset in ["sinusoid", "sinusoid_line", "harmonic"]:
+                    wandb.log({"Loss": res['valid_loss']})
+                else:
+                    wandb.log({"Accuracy": res['valid_acc']})
+
             # Save best model
             if is_best:
                 save_model = True

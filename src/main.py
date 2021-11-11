@@ -40,7 +40,7 @@ def parse_args():
                         help='Path to the folder the data is downloaded to.')
     parser.add_argument('--dataset', type=str,
                         choices=['sinusoid', 'omniglot', 'miniimagenet',
-                                 'tiered_imagenet', 'meta_dataset'],
+                                 'tiered_imagenet', 'meta_dataset', 'harmonic', 'sinusoid_line'],
                         default='omniglot',
                         help='Name of the dataset (default: omniglot).')
     parser.add_argument('--sub-dataset', type=str,

@@ -4,7 +4,7 @@ import random
 import numpy as np
 import os
 from collections import namedtuple, OrderedDict
-from src.datasets import Omniglot, MiniImagenet, MetaDataset, SingleMetaDataset, TieredImagenet
+from src.datasets import Omniglot, MiniImagenet, MetaDataset, SingleMetaDataset, TieredImagenet, Sinusoid, Harmonic, SinusoidAndLine
 from torchmeta.transforms import ClassSplitter, Categorical, Rotation
 from torchvision.transforms import ToTensor, Resize, Compose
 from torchvision import transforms
@@ -89,7 +89,7 @@ def get_benchmark_by_name(model_name,
                           use_augmentations=False,
                           sub_dataset_name=None):
     """Get dataset, model and loss function"""
-    from src.maml.model import ModelConvOmniglot, ModelConvMiniImagenet
+    from src.maml.model import ModelConvOmniglot, ModelConvMiniImagenet, ModelMLPSinusoid
     from src.reptile.model import ModelConvOmniglot as ModelConvOmniglotReptile
     from src.reptile.model import ModelConvMiniImagenet as ModelConvMiniImagenetReptile
     from src.protonet.model import Protonet_Omniglot, Protonet_MiniImagenet
@@ -101,6 +101,8 @@ def get_benchmark_by_name(model_name,
     dataset_transform = ClassSplitter(shuffle=True,
                                       num_train_per_class=num_shots,
                                       num_test_per_class=num_shots_test)
+
+    # Classification
 
     if name == 'omniglot':
         class_augmentations = [Rotation([90, 180, 270])]
@@ -283,7 +285,6 @@ def get_benchmark_by_name(model_name,
             model = MetaOptNet(name, metaoptnet_embedding, metaoptnet_head,
                                num_ways, num_shots, num_shots_test)
             loss_function = torch.nn.NLLLoss
-
     elif name == 'meta_dataset':
         train_set, validation_set, test_set = init_metadataset_data()
         meta_train_dataset = MetaDataset(folder, num_ways=num_ways, num_shots=num_shots, num_shots_test=num_shots_test,
@@ -345,6 +346,69 @@ def get_benchmark_by_name(model_name,
             model = MetaOptNet(name, metaoptnet_embedding, metaoptnet_head,
                                num_ways, num_shots, num_shots_test)
             loss_function = torch.nn.NLLLoss
+
+    # Regression
+
+    elif name == 'sinusoid':
+        transform = ToTensor1D()
+
+        meta_train_dataset = Sinusoid(num_shots + num_shots_test,
+                                      num_tasks=1000000,
+                                      transform=transform,
+                                      target_transform=transform,
+                                      dataset_transform=dataset_transform)
+        meta_val_dataset = Sinusoid(num_shots + num_shots_test,
+                                    num_tasks=1000000,
+                                    transform=transform,
+                                    target_transform=transform,
+                                    dataset_transform=dataset_transform)
+        meta_test_dataset = Sinusoid(num_shots + num_shots_test,
+                                     num_tasks=1000000,
+                                     transform=transform,
+                                     target_transform=transform,
+                                     dataset_transform=dataset_transform)
+        model = ModelMLPSinusoid(hidden_sizes=[40, 40])
+        loss_function = F.mse_loss
+    elif name == 'harmonic':
+        transform = ToTensor1D()
+
+        meta_train_dataset = Harmonic(num_shots + num_shots_test,
+                                      num_tasks=5000,
+                                      transform=transform,
+                                      target_transform=transform,
+                                      dataset_transform=dataset_transform)
+        meta_val_dataset = Harmonic(num_shots + num_shots_test,
+                                    num_tasks=5000,
+                                    transform=transform,
+                                    target_transform=transform,
+                                    dataset_transform=dataset_transform)
+        meta_test_dataset = Harmonic(num_shots + num_shots_test,
+                                     num_tasks=5000,
+                                     transform=transform,
+                                     target_transform=transform,
+                                     dataset_transform=dataset_transform)
+        model = ModelMLPSinusoid(hidden_sizes=[40, 40])
+        loss_function = F.mse_loss
+    elif name == 'sinusoid_line':
+        transform = ToTensor1D()
+
+        meta_train_dataset = SinusoidAndLine(num_shots + num_shots_test,
+                                             num_tasks=1000000,
+                                             transform=transform,
+                                             target_transform=transform,
+                                             dataset_transform=dataset_transform)
+        meta_val_dataset = SinusoidAndLine(num_shots + num_shots_test,
+                                           num_tasks=1000000,
+                                           transform=transform,
+                                           target_transform=transform,
+                                           dataset_transform=dataset_transform)
+        meta_test_dataset = SinusoidAndLine(num_shots + num_shots_test,
+                                            num_tasks=1000000,
+                                            transform=transform,
+                                            target_transform=transform,
+                                            dataset_transform=dataset_transform)
+        model = ModelMLPSinusoid(hidden_sizes=[40, 40])
+        loss_function = F.mse_loss
     else:
         raise NotImplementedError('Unknown dataset `{0}`.'.format(name))
 

@@ -73,13 +73,22 @@ class CombinationRandomSamplerStaticDDP(RandomSampler):
                                                                     replacement=True)
 
     def init_static_model(self, data_source, dataset_name):
-        from src.protonet.model import Protonet_Omniglot, Protonet_MiniImagenet
-        model = Protonet_Omniglot() if dataset_name == 'omniglot' else Protonet_MiniImagenet()
-        ways_path = "" if data_source.num_classes_per_task == 5 else "_20"
-        for model_path in enumerate(glob(f"protonet_{dataset_name}{ways_path}/0/*/config.json")):
-            with open(model_path, 'rb') as f:
-                model.load_state_dict(torch.load(f, map_location=torch.device(
-                    'cuda' if torch.cuda.is_available() else 'cpu')))
+        if dataset_name in ["sinusoid"]:
+            from src.maml.model import ModelMLPSinusoid
+            model = ModelMLPSinusoid()
+            ways_path = "" if data_source.num_classes_per_task == 5 else "_20"
+            for model_path in enumerate(glob(f"maml_{dataset_name}{ways_path}/0/*/config.json")):
+                with open(model_path, 'rb') as f:
+                    model.load_state_dict(torch.load(f, map_location=torch.device(
+                        'cuda' if torch.cuda.is_available() else 'cpu')))
+        else:
+            from src.protonet.model import Protonet_Omniglot, Protonet_MiniImagenet
+            model = Protonet_Omniglot() if dataset_name == 'omniglot' else Protonet_MiniImagenet()
+            ways_path = "" if data_source.num_classes_per_task == 5 else "_20"
+            for model_path in enumerate(glob(f"protonet_{dataset_name}{ways_path}/0/*/config.json")):
+                with open(model_path, 'rb') as f:
+                    model.load_state_dict(torch.load(f, map_location=torch.device(
+                        'cuda' if torch.cuda.is_available() else 'cpu')))
         return model
 
     def get_task_embedding(self, data_source, dataset_name):
@@ -92,9 +101,13 @@ class CombinationRandomSamplerStaticDDP(RandomSampler):
                                             use_batch_collate=dataset_name != 'meta_dataset'):
             train_inputs, train_targets, tasks = batch['train']
             with torch.no_grad():
-                train_embeddings, _ = self.model(train_inputs)
-                prototypes = get_prototypes(train_embeddings, train_targets,
-                                            data_source.num_classes_per_task)
+                is_classification_task = (not train_targets.dtype.is_floating_point)
+                if is_classification_task:
+                    train_embeddings, _ = self.model(train_inputs)
+                    prototypes = get_prototypes(train_embeddings, train_targets,
+                                                data_source.num_classes_per_task)
+                else:
+                    _, prototypes = self.model(train_inputs)
             for task_id, task in enumerate(tasks):
                 for class_id, index in enumerate(task):
                     task_embedding[str(index.item())] = np.array(

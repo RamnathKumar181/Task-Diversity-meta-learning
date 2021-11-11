@@ -103,7 +103,7 @@ class MetaMLPModel(MetaModule):
                                                                  'features'))
         logits = self.classifier(features,
                                  params=self.get_subdict(params, 'classifier'))
-        return logits
+        return logits, features
 
 
 def ModelConvOmniglot(out_features, hidden_size=64):

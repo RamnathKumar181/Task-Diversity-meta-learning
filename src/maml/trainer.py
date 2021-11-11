@@ -160,14 +160,25 @@ class MAMLTrainer():
                                                 verbose=self.args.verbose,
                                                 desc='Validation')
             if (epoch+1) % self.args.log_interval == 0:
-                wandb.log({"Accuracy": results['accuracies_after']})
+                if self.args.dataset in ["sinusoid", "sinusoid_line", "harmonic"]:
+                    wandb.log({"Loss": results['mean_outer_loss']})
+                else:
+                    wandb.log({"Accuracy": results['accuracies_after']})
             # Save best model
-            if ((best_value is None)
-                    or (best_value < results['accuracies_after'])):
-                best_value = results['accuracies_after']
-                save_model = True
+            if self.args.dataset in ["sinusoid", "sinusoid_line", "harmonic"]:
+                if ((best_value is None)
+                        or (best_value > results['mean_outer_loss'])):
+                    best_value = results['mean_outer_loss']
+                    save_model = True
+                else:
+                    save_model = False
             else:
-                save_model = False
+                if ((best_value is None)
+                        or (best_value < results['accuracies_after'])):
+                    best_value = results['accuracies_after']
+                    save_model = True
+                else:
+                    save_model = False
 
             if save_model and (self.args.output_folder is not None):
                 with open(self.args.model_path, 'wb') as f:
@@ -269,8 +280,10 @@ class MAMLTester():
                                                 desc='Testing')
         with open(os.path.join(dirname, 'results.json'), 'w') as f:
             json.dump(results, f)
-
-        self.highest_test = results['accuracies_after']
+        if self.config["dataset"] in ["sinusoid", "harmonic", "sinusoid_line"]:
+            self.highest_test = results['mean_outer_loss']
+        else:
+            self.highest_test = results['accuracies_after']
 
     def get_result(self):
         return tuple([self.highest_test])
