@@ -133,7 +133,7 @@ class Reptile(object):
     def inner_loop(self, fmodel, diffopt, train_input, train_target):
 
         train_logit, _ = fmodel(train_input)
-        inner_loss = F.cross_entropy(train_logit, train_target)
+        inner_loss = self.loss_function(train_logit, train_target)
         diffopt.step(inner_loss)
 
         return None
@@ -144,7 +144,7 @@ class Reptile(object):
             raise RuntimeError('The batch does not contain any test dataset.')
         self.model.zero_grad()
         _, test_targets, _ = batch['test']
-
+        is_classification_task = (not test_targets.dtype.is_floating_point)
         loss_log = 0
         acc_log = 0
         loss_list = []
@@ -167,16 +167,24 @@ class Reptile(object):
 
                 with torch.no_grad():
                     test_logit, _ = fmodel(test_input)
-                    outer_loss = F.cross_entropy(test_logit, test_target)
+                    outer_loss = self.loss_function(test_logit, test_target)
                     loss_log += outer_loss.item()/self.batch_size
                     loss_list.append(outer_loss.item())
                     acc_log += get_accuracy(test_logit, test_target).item()/self.batch_size
                     if self.ohtm and train:
-                        self.hardest_task[str(task.cpu().tolist())
-                                          ] = get_accuracy(test_logit, test_target).item()
+                        if is_classification_task:
+                            self.hardest_task[str(task.cpu().tolist())
+                                              ] = get_accuracy(test_logit, test_target).item()
+                        else:
+                            self.hardest_task[str(task.cpu().tolist())
+                                              ] = -outer_loss.item()
                     if self.log_test_tasks and not train:
-                        self.test_task_performance[str(task.cpu().tolist())
-                                                   ] = get_accuracy(test_logit, test_target).item()
+                        if is_classification_task:
+                            self.test_task_performance[str(task.cpu().tolist())
+                                                       ] = get_accuracy(test_logit, test_target).item()
+                        else:
+                            self.test_task_performance[str(task.cpu().tolist())
+                                                       ] = outer_loss.item()
 
                 if train:
                     outer_grad = []
@@ -245,3 +253,19 @@ class Reptile(object):
         acc = np.round(np.mean(acc_list), 4)
 
         return loss, acc
+
+    def plot(self, train_inputs, train_targets, test_inputs, test_targets):
+        with higher.innerloop_ctx(self.model, self.optimizer, track_higher_grads=True) as (fmodel, diffopt):
+            for step in range(self.num_adaptation_steps):
+                self.inner_loop(fmodel, diffopt, train_inputs, train_targets)
+            with torch.no_grad():
+                test_inputs = test_inputs.to(device=self.device)
+                test_targets = test_targets.to(device=self.device)
+                test_logits, _ = fmodel(test_inputs)
+
+            a = test_inputs.cpu().numpy()
+            b = test_targets.cpu().numpy()
+            c = test_logits.cpu().numpy()
+            results = [[a[i][0], b[i][0], c[i][0]] for i in range(len(a))]
+
+        return results

@@ -43,6 +43,8 @@ class Sinusoid(MetaDataset):
                  dataset_transform=None):
         super(Sinusoid, self).__init__(meta_split='train',
                                        target_transform=target_transform, dataset_transform=dataset_transform)
+        from src.utils import seed_everything
+        seed_everything()
         self.num_samples_per_task = num_samples_per_task
         self.num_tasks = num_tasks
         self.noise_std = noise_std
@@ -89,18 +91,18 @@ class SinusoidTask(Task):
                  num_samples, transform=None, target_transform=None,
                  np_random=None):
         super(SinusoidTask, self).__init__(index, None)  # Regression task
+        from src.utils import seed_everything
+        seed_everything()
         self.amplitude = amplitude
         self.phase = phase
         self.input_range = input_range
         self.num_samples = num_samples
         self.noise_std = noise_std
         self.index = index
-
         self.transform = transform
         self.target_transform = target_transform
-
         if np_random is None:
-            np_random = np.random.RandomState(None)
+            np_random = np.random.RandomState(0)
 
         self._inputs = np_random.uniform(input_range[0], input_range[1],
                                          size=(num_samples, 1))
@@ -113,7 +115,6 @@ class SinusoidTask(Task):
 
     def __getitem__(self, index):
         input, target = self._inputs[index], self._targets[index]
-
         if self.transform is not None:
             input = self.transform(input)
 

@@ -32,7 +32,7 @@ def parse_args():
                         default='maml',
                         help='Name of the model to be used (default: MAML).')
     parser.add_argument('--task_sampler', type=int,
-                        choices=[0, 1, 2, 3, 4, 5, 6, 7],
+                        choices=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
                         default=0,
                         help='Type of task sampler to be used '
                         '(default: 0).')
@@ -70,6 +70,9 @@ def parse_args():
     parser.add_argument('--batch-size', type=int, default=25,
                         help='Number of tasks in a batch of tasks '
                         '(default: 25).')
+    parser.add_argument('--additional-batch-size', default=None,
+                        help='Number of repetitions of given task in single batch fixed pool sampler'
+                        '(default: None).')
     parser.add_argument('--num-steps', type=int, default=1,
                         help='Number of fast adaptation steps, '
                         'ie. gradient descent updates (default: 1).')
@@ -122,6 +125,7 @@ def parse_args():
                         help='Experiment name'
                         '(default: None).')
     parser.add_argument('--log-test-tasks', action='store_true')
+    parser.add_argument('--plot', action='store_true')
 
     args = parser.parse_args()
 
@@ -138,7 +142,9 @@ def get_task_sampler(choice):
                     4: 'ohtm',
                     5: 'single_batch_uniform',
                     6: 's-DPP',
-                    7: 'd-DPP'}
+                    7: 'd-DPP',
+                    8: 'single_batch_fixed_pool',
+                    9: 'single_batch_increased_data'}
     return task_sampler[choice]
 
 
@@ -163,6 +169,7 @@ def test_model(args, dataset_name=None):
         config['train'] = args.train
         config['dataset'] = args.dataset
         config['log_test_tasks'] = args.log_test_tasks
+        config['plot'] = args.plot
         config['sub_dataset'] = args.sub_dataset
         config['batch_size'] = args.batch_size
         if not args.train and (dataset_name is None or dataset_name == 'ilsvrc_2012'):
@@ -217,6 +224,13 @@ if __name__ == '__main__':
     torch.cuda.empty_cache()
     args.task_sampler = get_task_sampler(args.task_sampler)
     if args.task_sampler == 'single_batch_uniform':
+        args.batch_size = 1
+    if args.task_sampler == 'single_batch_fixed_pool':
+        args.additional_batch_size = args.batch_size
+        args.num_epochs = args.num_epochs*args.batch_size
+        args.batch_size = 1
+    if args.task_sampler == 'single_batch_increased_data':
+        args.num_epochs = args.num_epochs*args.batch_size
         args.batch_size = 1
     args.exp_name = f"{args.exp_name}_{args.task_sampler}_sampler"
     if args.train:

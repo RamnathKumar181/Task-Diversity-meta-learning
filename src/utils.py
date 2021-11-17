@@ -9,7 +9,6 @@ from torchmeta.transforms import ClassSplitter, Categorical, Rotation
 from torchvision.transforms import ToTensor, Resize, Compose
 from torchvision import transforms
 
-
 Benchmark = namedtuple('Benchmark', 'meta_train_dataset meta_val_dataset '
                        'meta_test_dataset model loss_function')
 

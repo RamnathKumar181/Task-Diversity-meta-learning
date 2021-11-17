@@ -7,6 +7,8 @@ from src.maml.metalearners import ModelAgnosticMetaLearning as MAML
 from src.utils import get_benchmark_by_name, seed_everything
 from src.datasets.task_sampler import BatchMetaDataLoader as BMD
 import wandb
+import numpy as np
+import random
 
 
 class MAMLTrainer():
@@ -115,6 +117,16 @@ class MAMLTrainer():
                                               pin_memory=True,
                                               model_name=self.args.model,
                                               use_batch_collate=self.args.dataset != 'meta_dataset')
+        elif self.args.task_sampler == 'single_batch_fixed_pool':
+            logging.info("Using single_batch_fixed_pool sampler:\n\n")
+            from src.datasets.task_sampler import BatchMetaDataLoaderNDTB as BMD_NDTB
+            self.meta_train_dataloader = BMD_NDTB(self.benchmark.meta_train_dataset,
+                                                  batch_size=self.args.batch_size,
+                                                  additional_batch_size=self.args.additional_batch_size,
+                                                  shuffle=True,
+                                                  num_workers=self.args.num_workers,
+                                                  pin_memory=True,
+                                                  use_batch_collate=self.args.dataset != 'meta_dataset')
         else:
             logging.info("Using uniform_task sampler:\n\n")
             self.meta_train_dataloader = BMD(self.benchmark.meta_train_dataset,
@@ -161,6 +173,7 @@ class MAMLTrainer():
                                                 desc='Validation')
             if (epoch+1) % self.args.log_interval == 0:
                 if self.args.dataset in ["sinusoid", "sinusoid_line", "harmonic"]:
+                    logging.info(f"{epoch}: {results['mean_outer_loss']}")
                     wandb.log({"Loss": results['mean_outer_loss']})
                 else:
                     wandb.log({"Accuracy": results['accuracies_after']})
@@ -214,6 +227,8 @@ class MAMLTester():
         self._build_loader()
         self._build_metalearner()
         self._test()
+        if self.config["plot"]:
+            self._plot()
 
     def _build_loader(self):
         self.benchmark = get_benchmark_by_name(self.config['model'],
@@ -291,3 +306,25 @@ class MAMLTester():
     def _device(self):
         return torch.device('cuda' if self.config['use_cuda']
                             and torch.cuda.is_available() else 'cpu')
+
+    def _plot(self):
+        results = {}
+        seed_everything()
+        if self.config["dataset"] == "sinusoid":
+            amplitude = 1.0
+            phase = 2.0
+            train_inputs = np.asarray([[x] for x in random.sample(
+                list([[x] for x in np.arange(-5.0, 5.0, 0.0001)]), self.config['num_shots'])])
+            train_targets = amplitude * np.sin(train_inputs - phase)
+            test_inputs = np.asarray([[x] for x in np.arange(-5.0, 5.0, 0.0001)])
+            test_targets = amplitude * np.sin(test_inputs - phase)
+            test_results = self.metalearner.plot(
+                torch.tensor(train_inputs).float().to(self.device), torch.tensor(
+                    train_targets).float().to(self.device),
+                torch.tensor(test_inputs).float().to(self.device), torch.tensor(test_targets).float().to(self.device))
+        results["train"] = [[train_inputs[i][0][0], train_targets[i][0][0]]
+                            for i in range(len(train_targets))]
+        results["test"] = test_results
+
+        dirname = os.path.dirname(self.config['model_path'])
+        np.save(os.path.join(dirname, 'plot_performance.npy'), results)

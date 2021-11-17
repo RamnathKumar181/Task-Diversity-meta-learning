@@ -97,7 +97,9 @@ def get_task_sampler(choice):
                     4: 'ohtm',
                     5: 'single_batch_uniform',
                     6: 's-DPP',
-                    7: 'd-DPP'}
+                    7: 'd-DPP',
+                    8: 'single_batch_fixed_pool',
+                    9: 'single_batch_increased_data'}
     return task_sampler[choice]
 
 

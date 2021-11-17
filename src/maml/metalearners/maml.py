@@ -258,6 +258,23 @@ class ModelAgnosticMetaLearning(object):
             if self.log_test_tasks and len(self.test_task_performance) == 1024:
                 break
 
+    def plot(self, train_inputs, train_targets, test_inputs, test_targets):
+        params, adaptation_results = self.adapt(train_inputs, train_targets,
+                                                is_classification_task=False,
+                                                num_adaptation_steps=self.num_adaptation_steps,
+                                                step_size=self.step_size, first_order=self.first_order)
+        with torch.set_grad_enabled(self.model.training):
+            test_inputs = test_inputs.to(device=self.device)
+            test_targets = test_targets.to(device=self.device)
+            test_logits, _ = self.model(test_inputs, params=params)
+
+            a = test_inputs.cpu().numpy()
+            b = test_targets.cpu().numpy()
+            c = test_logits.cpu().numpy()
+            results = [[a[i][0], b[i][0], c[i][0]] for i in range(len(a))]
+
+        return results
+
 
 MAML = ModelAgnosticMetaLearning
 

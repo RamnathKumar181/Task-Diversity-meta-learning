@@ -81,12 +81,15 @@ class MetaDataLoader(DataLoader):
     def __init__(self, dataset, batch_size=1, shuffle=True, sampler=None,
                  batch_sampler=None, num_workers=0, collate_fn=None,
                  pin_memory=False, drop_last=False, timeout=0,
-                 worker_init_fn=None):
+                 worker_init_fn=None, additional_batch_size=None):
         if collate_fn is None:
             collate_fn = no_collate
 
         if isinstance(dataset, CombinationMetaDataset) and (sampler is None):
-            sampler = CombinationRandomSampler(dataset, batch_size)
+            if additional_batch_size is None:
+                sampler = CombinationRandomSampler(dataset, batch_size)
+            else:
+                sampler = CombinationRandomSampler(dataset, additional_batch_size)
         shuffle = False
 
         super(MetaDataLoader, self).__init__(dataset, batch_size=batch_size,
@@ -98,7 +101,8 @@ class MetaDataLoader(DataLoader):
 
 class BatchMetaDataLoaderNDTB(MetaDataLoader):
     def __init__(self, dataset, batch_size=1, shuffle=True, sampler=None, num_workers=0,
-                 pin_memory=False, drop_last=False, timeout=0, worker_init_fn=None, batch_sampler=None, use_batch_collate=True):
+                 pin_memory=False, drop_last=False, timeout=0, worker_init_fn=None, batch_sampler=None,
+                 use_batch_collate=True, additional_batch_size=None):
         if use_batch_collate:
             collate_fn = BatchMetaCollate(default_collate)
         else:
@@ -109,4 +113,4 @@ class BatchMetaDataLoaderNDTB(MetaDataLoader):
                                                       batch_size=batch_size, shuffle=shuffle, sampler=sampler,
                                                       batch_sampler=batch_sampler, num_workers=num_workers,
                                                       collate_fn=collate_fn, pin_memory=pin_memory, drop_last=drop_last,
-                                                      timeout=timeout, worker_init_fn=worker_init_fn)
+                                                      timeout=timeout, worker_init_fn=worker_init_fn, additional_batch_size=additional_batch_size)
