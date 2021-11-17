@@ -20,6 +20,8 @@ Omniglot, *mini*ImageNet, and *tiered*ImageNet will be downloaded automatically 
 * Run `sbatch scripts/download_meta_dataset/install_meta_dataset_parallel.sh` to download and prune all datasets in a parallel fashion. Note that, due to memory constraints, we are saving ILSVRC2012 in a seperate directory from the other 9 datasets. While running the scripts to train the model, make sure to copy all the datasets to a single directory.
 * That's it, you are good to go! :)
 
+For the few-shot-regression setting, we test on Sinusoid, Sinusoid & Line, and Harmonic dataset. Furthermore, these datasets are toy examples and require no downloads.
+
 ### Training & Testing
 
 We have carefully organized our codes under [`scripts`](scripts).
@@ -172,6 +174,40 @@ Our repository makes use of various open-source codes. If you find the respectiv
   author={Triantafillou, Eleni and Zhu, Tyler and Dumoulin, Vincent and Lamblin, Pascal and Evci, Utku and Xu, Kelvin and Goroshin, Ross and Gelada, Carles and Swersky, Kevin and Manzagol, Pierre-Antoine and others},
   journal={arXiv preprint arXiv:1903.03096},
   year={2019}
+}
+```
+### Sinusoid
+
+```
+@inproceedings{finn2017model,
+  title={Model-agnostic meta-learning for fast adaptation of deep networks},
+  author={Finn, Chelsea and Abbeel, Pieter and Levine, Sergey},
+  booktitle={International Conference on Machine Learning},
+  pages={1126--1135},
+  year={2017},
+  organization={PMLR}
+}
+```
+
+### Sinudoid & Line
+
+```
+@article{finn2018probabilistic,
+  title={Probabilistic model-agnostic meta-learning},
+  author={Finn, Chelsea and Xu, Kelvin and Levine, Sergey},
+  journal={arXiv preprint arXiv:1806.02817},
+  year={2018}
+}
+```
+
+### Harmonic
+
+```
+@article{lacoste2018uncertainty,
+  title={Uncertainty in multitask transfer learning},
+  author={Lacoste, Alexandre and Oreshkin, Boris and Chung, Wonchang and Boquet, Thomas and Rostamzadeh, Negar and Krueger, David},
+  journal={arXiv preprint arXiv:1806.07528},
+  year={2018}
 }
 ```
 
