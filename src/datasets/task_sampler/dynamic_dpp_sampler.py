@@ -185,6 +185,11 @@ class dDPP(object):
         self.use_batch_collate = use_batch_collate
         self.model = None
         self.DPP = None
+        self.loader = BatchMetaDataLoaderdDPP(self.dataset,
+                                              batch_size=self.batch_size,
+                                              shuffle=self.shuffle,
+                                              num_workers=self.num_workers,
+                                              pin_memory=self.pin_memory, DPP=self.DPP, use_batch_collate=self.use_batch_collate)
 
     def init_metalearner(self, metalearner):
         self.metalearner = metalearner
@@ -262,10 +267,11 @@ class dDPP(object):
         self.index += 1
         if self.index % 500 == 0:
             self.DPP = self.get_diverse_tasks()
-        for batch in BatchMetaDataLoaderdDPP(self.dataset,
-                                             batch_size=self.batch_size,
-                                             shuffle=self.shuffle,
-                                             num_workers=self.num_workers,
-                                             pin_memory=self.pin_memory, DPP=self.DPP, use_batch_collate=self.use_batch_collate):
+            self.loader = BatchMetaDataLoaderdDPP(self.dataset,
+                                                  batch_size=self.batch_size,
+                                                  shuffle=self.shuffle,
+                                                  num_workers=self.num_workers,
+                                                  pin_memory=self.pin_memory, DPP=self.DPP, use_batch_collate=self.use_batch_collate)
+        for batch in self.loader:
             return batch
             break
