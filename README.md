@@ -48,7 +48,14 @@ python -m src.analysis.py <path_to_task_json> -O <path_to_output_json>
 
 If you find our codes useful, do consider citing our paper:
 ```
-Add arxiv link here
+@misc{kumar2022effect,
+      title={The Effect of Diversity in Meta-Learning}, 
+      author={Ramnath Kumar and Tristan Deleu and Yoshua Bengio},
+      year={2022},
+      eprint={2201.11775},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
 ```
 
 # References
